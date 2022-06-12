@@ -1,30 +1,22 @@
-import getpass
+#!/usr/bin/env python3
+
 from collections import namedtuple
-from lxml import objectify
+import os.path
 from project import Project
 from importer import Importer
 from labelcolourselector import LabelColourSelector
+from utils import read_xml_files
 
+file_names = os.getenv('JIRA_MIGRATION_FILE_PATHS') or input(
+    'Path to Jira XML query file (semi-colon separate for multiple files, directories are accepted): ')
+all_xml_files = read_xml_files(file_names)
 
-def read_xml_sourcefile(file_names):
-    files = list()
-    for file_name in file_names.split(';'):
-        all_text = open(file_name).read()
-        files.append(objectify.fromstring(all_text))
-
-    return files
-
-
-file_names = input(
-    'Path to JIRA XML query file (semi-colon separate for multiple files): ')
-all_xml_files = read_xml_sourcefile(file_names)
-
-jira_proj = input('JIRA project name: ') or 'INFRA'
-jira_done_id = input('JIRA Done statusCategory ID [default "3"]: ') or '3'
-jira_base_url = input('JIRA base url [default "https://issues.jenkins.io"]: ') or 'https://issues.jenkins.io'
-ac = input('GitHub account name (user/org): ') or 'jenkins-infra'
-repo = input('GitHub repository name: ') or 'helpdesk'
-pat = input('Github Personal Access Token: ') # or '<your-github-pat>'
+jira_proj = os.getenv('JIRA_MIGRATION_JIRA_PROJECT_NAME') or input('Jira project name: ') or 'INFRA'
+jira_done_id = os.getenv('JIRA_MIGRATION_JIRA_DONE_ID') or input('Jira Done statusCategory ID [default "3"]: ') or '3'
+jira_base_url = os.getenv('JIRA_MIGRATION_JIRA_URL') or input('Jira base url [default "https://issues.jenkins.io"]: ') or 'https://issues.jenkins.io'
+ac = os.getenv('JIRA_MIGRATION_GITHUB_NAME') or input('GitHub account name (user/org): ') or 'jenkins-infra'
+repo = os.getenv('JIRA_MIGRATION_GITHUB_REPO') or input('GitHub repository name: ') or 'helpdesk'
+pat = os.getenv('JIRA_MIGRATION_GITHUB_ACCESS_TOKEN') or input('Github Personal Access Token: ') # or '<your-github-pat>'
 start_from_issue = input('Start from [default "0" (beginning)]: ') or '0'
 
 Options = namedtuple("Options", "accesstoken account repo")

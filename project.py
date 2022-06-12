@@ -1,9 +1,9 @@
+import os
 from collections import defaultdict
 from html.entities import name2codepoint
 from dateutil.parser import parse
-from pprint import pprint
 import re
-import json
+
 
 class Project:
 
@@ -30,6 +30,11 @@ class Project:
         merge = self._project['Components'].copy()
         merge.update(self._project['Labels'])
         merge.update(self._project['Types'])
+        merge.update({'imported-jira-issue': 0})
+        return merge
+
+    def get_labels(self):
+        merge = self._project['Labels'].copy()
         merge.update({'imported-jira-issue': 0})
         return merge
 
@@ -93,7 +98,8 @@ class Project:
 
         body = self._htmlentitydecode(item.description.text)
         # metadata: original author & link
-        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + item.reporter + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
+
+        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
         # metadata: assignee
         body = body + '\n<i><ul>'
         if item.assignee != 'Unassigned':
@@ -120,12 +126,11 @@ class Project:
         # retrieve jira components and labels as github labels
         labels = []
         for component in item.component:
-            labels.append('jira-component:' + component.text.lower())
-            labels.append(component.text.lower())
+            if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
+                labels.append('jira-component:' + component.text.lower())
+                labels.append(component.text.lower())
 
-        #labels.append('type:' + component.text)
-        for ltype in self._project['Types'].keys():
-            labels.append('jira-type:' + component.text)
+        labels.append(self._jira_type_mapping(item.type.text.lower()))
         
         try:
             for label in item.labels.label:
@@ -154,6 +159,22 @@ class Project:
                                         })
         if not self._project['Issues'][-1]['closed_at']:
             del self._project['Issues'][-1]['closed_at']
+
+    def _jira_type_mapping(self, issue_type):
+        if issue_type == 'bug':
+            return 'bug'
+        if issue_type == 'improvement':
+            return 'rfe'
+        if issue_type == 'new feature':
+            return 'rfe'
+        if issue_type == 'task':
+            return 'rfe'
+        if issue_type == 'story':
+            return 'rfe'
+        if issue_type == 'patch':
+            return 'rfe'
+        if issue_type == 'epic':
+            return 'epic'
 
     def _convert_to_iso(self, timestamp):
         dt = parse(timestamp)
