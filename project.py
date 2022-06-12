@@ -4,6 +4,8 @@ from html.entities import name2codepoint
 from dateutil.parser import parse
 import re
 
+from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
+
 
 class Project:
 
@@ -13,6 +15,9 @@ class Project:
         self.jiraBaseUrl = jiraBaseUrl
         self._project = {'Milestones': defaultdict(int), 'Components': defaultdict(
             int), 'Labels': defaultdict(int), 'Types': defaultdict(int), 'Issues': []}
+
+        self.labels_mapping = fetch_labels_mapping()
+        self.approved_labels = fetch_allowed_labels()
 
     def get_milestones(self):
         return self._project['Milestones']
@@ -132,11 +137,10 @@ class Project:
 
         labels.append(self._jira_type_mapping(item.type.text.lower()))
         
-        try:
-            for label in item.labels.label:
-                labels.append(label.key().trim().lower())
-        except AttributeError:
-            pass
+        for label in item.labels.findall('label'):
+            converted_label = convert_label(label.text.strip().lower(), self.labels_mapping, self.approved_labels)
+            if converted_label is not None:
+                labels.append(converted_label)
 
         labels.append('imported-jira-issue')
 

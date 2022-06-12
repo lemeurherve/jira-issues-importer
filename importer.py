@@ -2,6 +2,9 @@ import os
 import requests
 import time
 
+from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
+
+
 class Importer:
     _GITHUB_ISSUE_PREFIX = "INFRA-"
     _PLACEHOLDER_PREFIX = "@PSTART"
@@ -22,12 +25,8 @@ class Importer:
             'Authorization': f'token {options.accesstoken}'
         }
 
-        with open("labels_mapping.txt") as file:
-            entry = [line.split("=") for line in file.readlines()]
-            self.labels_mapping = {key.strip(): value.strip() for key, value in entry}
-
-        with open("allowed_labels.txt") as file:
-            self.approved_labels = [line.strip('\n') for line in file.readlines()]
+        self.labels_mapping = fetch_labels_mapping()
+        self.approved_labels = fetch_allowed_labels()
 
     def import_milestones(self):
         """
@@ -92,21 +91,6 @@ class Importer:
                 self.project.get_milestones()[mkey] = content['number']
                 print(mkey)
 
-    def _map_label(self, label):
-        if label in self.labels_mapping:
-            return self.labels_mapping[label]
-        else:
-            return label
-
-    def _is_label_approved(self, label):
-        return label in self.approved_labels
-
-    def convert_label(self, label):
-        mapped_label = self._map_label(label)
-
-        if self._is_label_approved(mapped_label):
-            return mapped_label
-        return None
 
     def import_labels(self, colour_selector):
         """
@@ -124,7 +108,7 @@ class Importer:
                 if lkey in self.project.get_components().keys():
                     prefixed_lkey = 'jira-component:' + prefixed_lkey
 
-            prefixed_lkey = self.convert_label(prefixed_lkey)
+            prefixed_lkey = convert_label(prefixed_lkey, self.labels_mapping, self.approved_labels)
             if prefixed_lkey is None:
                 continue
 
@@ -185,6 +169,7 @@ class Importer:
         Finally the issue github is noted.    
         """
         print('Issue ', issue['key'])
+        print('Labels', issue['labels'])
         jiraKey = issue['key']
         del issue['key']
 
