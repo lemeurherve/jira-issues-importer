@@ -244,32 +244,44 @@ class Importer:
         relates_to = issue['is-related-to']
         depends_on = issue['depends-on']
         blocks = issue['blocks']
+        try:
+            epic_link = issue['epic-link']
+        except (AttributeError, KeyError):
+            epic_link = None
 
         for duplicate_item in duplicates:
             issue['comments'].append(
-                {"body": '<i>[Duplicates: <a href="https://github.com/jenkins-infra/helpdesk/issues?q=' + self._replace_jira_with_github_id(duplicate_item) + '">' + self._replace_jira_with_github_id(duplicate_item) + '</a>]</i>'})
+                {"body": f'<i>[Duplicates: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=' + self._replace_jira_with_github_id(duplicate_item) + '">' + self._replace_jira_with_github_id(duplicate_item) + '</a>]</i>'})
 
         for is_duplicated_by_item in is_duplicated_by:
             issue['comments'].append(
-                {"body": '<i>[Originally duplicated by: <a href="https://github.com/jenkins-infra/helpdesk/issues?q=' + self._replace_jira_with_github_id(is_duplicated_by_item) + '">' + self._replace_jira_with_github_id(is_duplicated_by_item) + '</a>]</i>'})
+                {"body": f'<i>[Originally duplicated by: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=' + self._replace_jira_with_github_id(is_duplicated_by_item) + '">' + self._replace_jira_with_github_id(is_duplicated_by_item) + '</a>]</i>'})
 
         for relates_to_item in relates_to:
             issue['comments'].append(
-                {"body": '<i>[Originally related to: <a href="https://github.com/jenkins-infra/helpdesk/issues?q=' + self._replace_jira_with_github_id(relates_to_item) + '">' + self._replace_jira_with_github_id(relates_to_item) + '</a>]</i>'})
+                {"body": f'<i>[Originally related to: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=' + self._replace_jira_with_github_id(relates_to_item) + '">' + self._replace_jira_with_github_id(relates_to_item) + '</a>]</i>'})
 
         for depends_on_item in depends_on:
             issue['comments'].append(
-                {"body": '<i>[Originally depends on: <a href="https://github.com/jenkins-infra/helpdesk/issues?q=' + self._replace_jira_with_github_id(depends_on_item) + '">' + self._replace_jira_with_github_id(depends_on_item) + '</a>]</i>'})
+                {"body": f'<i>[Originally depends on: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=' + self._replace_jira_with_github_id(depends_on_item) + '">' + self._replace_jira_with_github_id(depends_on_item) + '</a>]</i>'})
 
         for blocks_item in blocks:
             issue['comments'].append(
-                {"body": '<i>[Originally blocks: <a href="https://github.com/jenkins-infra/helpdesk/issues?q=' + self._replace_jira_with_github_id(blocks_item) + '">' + self._replace_jira_with_github_id(blocks_item) + '</a>]</i>'})
+                {"body": f'<i>[Originally blocks: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=' + self._replace_jira_with_github_id(blocks_item) + '">' + self._replace_jira_with_github_id(blocks_item) + '</a>]</i>'})
+
+        if epic_link:
+            issue['comments'].append(
+                {"body": f'<i>[Epic: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=' + self._replace_jira_with_github_id(epic_link) + ' label:epic">' + self._replace_jira_with_github_id(epic_link) + '</a>]</i>'})
 
         del issue['duplicates']
         del issue['is-duplicated-by']
         del issue['is-related-to']
         del issue['depends-on']
         del issue['blocks']
+        try:
+            del issue['epic-link']
+        except KeyError:
+            pass
 
     def _replace_jira_with_github_id(self, text):
         result = text

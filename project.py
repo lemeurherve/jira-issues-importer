@@ -284,6 +284,11 @@ class Project:
         except KeyError:
             print('2. KeyError at ' + item.key.text)
 
+        for customfield in item.customfields.findall('customfield'):
+            if customfield.get('key') == 'com.pyxis.greenhopper.jira:gh-epic-link':
+                epic_key = customfield.customfieldvalues.customfieldvalue
+                self._project['Issues'][-1]['epic-link'] = epic_key
+
     def _htmlentitydecode(self, s):
         if s is None:
             return ''
