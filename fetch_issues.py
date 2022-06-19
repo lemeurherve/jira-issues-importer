@@ -13,7 +13,7 @@ jql_query = os.getenv('JIRA_MIGRATION_JQL_QUERY')
 file_path = 'jira_output'
 
 encoded_query = urllib.parse.quote(jql_query)
-pager = 7000
+pager = 0
 
 
 def fetch_total_results():

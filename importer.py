@@ -69,12 +69,14 @@ class Importer:
 
         for ms_json in milestone_pages:
             for m in ms_json:
-                if m['title'] in self.project.get_milestones().keys():
-                    self.project.get_milestones()[m['title']] = m['number']
-                    print(m['title'], 'found')
-                    existing.append(m['title'])
-                else:
-                    print(m['title'], 'not found')
+                print(self.project.get_milestones().keys())
+                try:
+                    if m['title'] in self.project.get_milestones().keys():
+                        self.project.get_milestones()[m['title']] = m['number']
+                        print(m['title'], 'found')
+                        existing.append(m['title'])
+                except TypeError:
+                    pass
 
         # Export new ones
         for mkey in self.project.get_milestones().keys():
