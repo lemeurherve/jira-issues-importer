@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 from html.entities import name2codepoint
 from dateutil.parser import parse
+from datetime import datetime
 import re
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
@@ -125,7 +126,7 @@ class Project:
             body = body + '\n<li><b>resolved</b>: ' + self._convert_to_iso(item.resolved.text)
         except AttributeError:
             pass
-        body = body + '\n<li><b>imported</b>: 2022/01/10'
+        body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
         body = body + '\n</ul></i>\n</details>'
 
         # retrieve jira components and labels as github labels
