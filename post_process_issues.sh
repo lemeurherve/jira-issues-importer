@@ -7,11 +7,15 @@ set -e -o pipefail
 
 OWNER=${1:-timja}
 REPO=${2:-jenkins-gh-issues-poc-06-18}
+START_FROM=${3:-0}
 
 ALL_ISSUES=$(gh issue list -R ${OWNER}/${REPO} --limit=20000 --state=all --json number,labels)
-ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES}"| jq '.[].number' | sort | uniq)
+ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES}"| jq '.[].number' | sort -g | uniq)
 
 while IFS= read -r ISSUE_CHECKING; do
+  if (( ISSUE_CHECKING < START_FROM )); then
+    continue
+  fi
   echo "Checking $ISSUE_CHECKING"
   COMMENT=$(gh issue view -R timja/jenkins-gh-issues-poc-06-18 "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[].body | select(contains("[Epic:"))')
 
