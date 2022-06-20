@@ -17,7 +17,7 @@ while IFS= read -r ISSUE_CHECKING; do
     continue
   fi
   echo "Checking $ISSUE_CHECKING"
-  COMMENT=$(gh issue view -R timja/jenkins-gh-issues-poc-06-18 "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[].body | select(contains("[Epic:"))')
+  COMMENT=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[].body | select(contains("[Epic:"))')
 
   if [ -n "$COMMENT"  ]
   then
