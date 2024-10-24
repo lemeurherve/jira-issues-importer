@@ -1,95 +1,73 @@
-# Update
+# Jira Issue Migrator
 
-I created this fork to address GitHub's [change in API authentication](https://developer.github.com/changes/2020-02-10-deprecating-auth-through-query-param/). 
+Jira Issue Migrator is a Python-based tool designed to migrate issues from Jira to GitHub. The script handles both standard and security-level issues by simulating and later performing the migration process. It includes support for importing milestones, labels, and issues from Jira to the respective GitHub repositories.
 
-I also fixed some bugs, updated some formatting, and set some defaults when running the tool. For JIRA issues with subtasks, the imported issues now include a list of the subtasks or parent task as appropriate.
+## Features
 
-Finally, I disabled the issue ID replacement procedures. It wasn't working for me, and I didn't find this step necessary, anyway.
+- **Issue Migration**: Simulates and migrates Jira issues to GitHub repositories.
+- **Security-level Handling**: Issues with specific security levels can be migrated to a separate GitHub repository.
+- **Milestone and Label Import**: Imports milestones and labels for each repository during migration.
+- **Simulation Mode**: Simulates the migration process for validation before performing the actual migration.
+- **Detailed Logs**: Provides a log file (`migration_simulation.log`) containing the detailed status of each issue migration.
 
-# JIRA issues importer
+## Files
 
-Python 3.x scripts for importing JIRA issues in XML format into an existing Github project without existing issues
+- `main.py`: The main script responsible for orchestrating the migration.
+- `run_migration.sh`: Bash wrapper script to automate environment setup and run the migration script.
+- `fetch_issues.py`: Script to fetch Jira issues for migration.
+- `fetch_labels.py`: Script to fetch labels associated with Jira issues.
+- `importer.py`: Handles the actual import process of issues, milestones, and labels.
+- `labelcolourselector.py`: Assists in assigning colors to GitHub labels.
+- `project.py`: Manages the migration project, including Jira project details.
+- `utils.py`: Contains utility functions for reading Jira XML files.
+- `requirements.txt`: Lists the Python dependencies for the migration scripts.
 
-# Background
+## Prerequisites
 
-Due to the java.net close-down in April 2017 there is a need to move projects from the java.net forge to Github.
-Part of the transition is the migration of java.net JIRA issues to the Github issue tracker.
-Googling for solutions for this issue migration I came across these "dirty" migration scripts from the following GISTs:
+- Python 3.x
+- A GitHub personal access token (PAT), **classic**, with access to the relevant repositories.
+- Jira XML export of issues to be migrated.
 
-* https://gist.github.com/Jach/1537770
-* https://gist.github.com/mkurz/20293e306b1c6fefff7c
+## Installation
 
-I took these as a starting point for this project. I restructured the code and added some more features.
+Clone the repository:
 
-# Features
+```bash
+git clone https://github.com/your-username/jira-issue-migrator.git
+cd jira-issue-migrator
+pip install -r requirements.txt
+```
 
-* Import JIRA milestones as Github milestones
-* Import JIRA labels as Github labels
-* Import JIRA components as Github labels
-* Configure colour scheme for labelling on import
-* Import multiple files to help overcome the export limit of 1000 (export multiple files by by using the JIRA key column as a range)
-* Import JIRA issues as Github issues where
-  * issue ids are mapped one by one, e.g. PROJECT-1 becomes GH-1 and PROJECT-4711 becomes GH-4711
-  * both issue label and component assignments are mapped to Github labels
-  * issue relationships like "depends on", "blocks" or "duplicates" are mapped to special Github comments
-  * issue timestamps such as creation, close or update date are considered
-  * issue states (open or closed) are considered
-  * issue comments are mapped to Github comments
-    * JIRA issue references in normal and relationship comments are replaced by references to the Github issue id  
+## Usage
 
-# Caveats
- * this project does not try to map JIRA users to Github users
-   * the Github user (based on the personal access token used) which performs the import will appear as issue creator, the original JIRA issue reporter is noted in the first comment
-   * the Github user which performs the import will also appear as comment creator, as the Github API doesn't support that (yet),
-     the original JIRA commentator is noted in the comment text
+1. **Prepare your environment:**
 
-# Assumptions and prerequisites
+   Ensure the Jira XML export file is in the same directory as the scripts. No need to provide an explicit path; the script will auto-detect the XML file. 
 
-* use these scripts at your own risk, no warranties for a correct and successful migration are given
-* it's recommended to test your issue migration first with a test project on Github
-* input to the import script is the XML export file of your JIRA project, see below
-* works with JIRA Cloud, as of March 2019
-* your target Github project should already exist with the issue tracker enabled
-* there should be no existing issues and pull requests - else the issue id mapping will be incorrect
+2. **Run the migration script using the bash wrapper:**
 
-# Getting started
+   Use the `run_migration.sh` script to run the migration simulation and provide the necessary arguments:
 
-## Setup
+   ```bash
+   ./run_migration.sh -p <JIRA_PROJECT> -u <JIRA_URL> -g <GITHUB_ACCOUNT> -s <SECURITY_REPO_NAME> -r <DEFAULT_REPO_NAME>
+   ```
 
-* clone this repository
-* run `pip install -r requirements.txt`
-* edit the `labelcolourselector.py` if you want to change the logic of how the colours are set on labels
-* [create a personal access token in GitHub](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) (Be sure to save the token somewhere safe; you will have to enter it later. **Warning:** Treat your tokens like passwords and keep them secret.)
+   Example:
 
-## Running the tool
+   ```bash
+   ./run_migration.sh -p CIMANAGE -u jira.example.com -g your-org -s security-repo -r default-repo
+   ```
 
-* export the desired JIRA issues of your project ([see section below](#export-jira-issues))
-* to start the Github import, execute `python main.py`
-* on startup it will ask for
-  * the JIRA XML export file name (use a semi-colon to enter multiple XML paths)
-  * the JIRA project name
-  * the `<statusCategoryId>` element's `id` attribute that signifies an issue as Done (this is an integer)
-  * the Github account name that owns the repository (user or organization)
-  * the target Github repository name
-  * the Github [personal access token](https://github.com/settings/tokens) for authentication
-  * the index at which to start from, enter 0 to begin, if you have a failure, enter the index number the import failed at. Entering a number higher than 0 will stop labels from re-importing and milestones will re-match to existing.
-* the import process will then
-  * read the JIRA XML export file and create an in-memory project representation of the xml file contents
-  * import the milestones with the regular [Github Milestone API](https://developer.github.com/v3/issues/milestones/)
-  * import the labels with the regular [Github Label API](https://developer.github.com/v3/issues/labels/)
-  * import the issues with comments with the [Github Import API](https://gist.github.com/jonmagic/5282384165e0f86ef105)
-    * references to issues in the comments are replaced with placeholders in this step
-    * the used import API will not run into abuse rate limits in contrast to the normal [Github Issues API](https://developer.github.com/v3/issues/)
-  * post-process all comments to replace the issue reference placeholders with the real Github issue ids using the [Github Comment API](https://developer.github.com/v3/issues/comments/)
+   This will perform an assessment, verify the Jira XML export, and simulate the migration. A log of the simulation can be found in `migration_simulation.log`.
 
-## Export JIRA issues
+3. **Review the simulation log:**
 
-1. Navigate to Issue search page for project. Issues --> Search for Issues
+   Ensure the migration logic is correct by reviewing the `migration_simulation.log`.
 
-1. Select project you are interested in
+4. **Perform the actual migration (when ready):**
 
-1. Specify Query criteria, Sort as needed, if you have more than 1000 items use something like eg. ` project = INFRA and issuekey <= INFRA-3000 AND issuekey > INFRA-2000 ORDER BY created DESC` to select a range and export each set into separate XML files
+   After validating the simulation, you can modify the script to perform the actual migration.
 
-1. From results page, click on Export icon at the top right of page
+## Logging
 
-1. Select XML output and save file
+A detailed log of each migration simulation is saved in `migration_simulation.log` file. This file includes the status of each milestone, label, and issue migration for review before performing the actual migration.

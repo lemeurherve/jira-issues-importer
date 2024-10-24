@@ -4,14 +4,24 @@ import glob
 
 
 def fetch_labels_mapping():
-    with open("labels_mapping.txt") as file:
-        entry = [line.split("=") for line in file.readlines()]
-    return {key.strip(): value.strip() for key, value in entry}
+    # If labels_mapping.txt is not found, we return an empty dictionary
+    try:
+        with open("labels_mapping.txt") as file:
+            entry = [line.split("=") for line in file.readlines()]
+        return {key.strip(): value.strip() for key, value in entry}
+    except FileNotFoundError:
+        print("Warning: labels_mapping.txt not found. No label mappings will be applied.")
+        return {}
 
 
 def fetch_allowed_labels():
-    with open("allowed_labels.txt") as file:
-        return [line.strip('\n') for line in file.readlines()]
+    # Graceful handling if allowed_labels.txt is missing
+    try:
+        with open("allowed_labels.txt") as file:
+            return [line.strip('\n') for line in file.readlines()]
+    except FileNotFoundError:
+        print("Warning: allowed_labels.txt not found. No label filtering will be applied.")
+        return []
 
 
 def _map_label(label, labels_mapping):

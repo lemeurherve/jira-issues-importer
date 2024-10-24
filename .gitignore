@@ -80,6 +80,7 @@ celerybeat-schedule
 .env
 
 # virtualenv
+jira_migration_venv/
 venv/
 ENV/
 
@@ -94,3 +95,6 @@ ENV/
 labels_mapping.txt
 allowed_labels.txt
 jira-keys-to-github-id.txt
+
+# misc
+*~ 

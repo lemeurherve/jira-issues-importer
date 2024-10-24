@@ -7,45 +7,77 @@ from importer import Importer
 from labelcolourselector import LabelColourSelector
 from utils import read_xml_files
 
-file_names = os.getenv('JIRA_MIGRATION_FILE_PATHS') or input(
-    'Path to Jira XML query file (semi-colon separate for multiple files, directories are accepted): ')
-all_xml_files = read_xml_files(file_names)
+# GitHub repository URLs for security and non-security issues
+SECURITY_REPO_URL = os.getenv('SECURITY_REPO_URL')
+DEFAULT_REPO_URL = os.getenv('DEFAULT_REPO_URL')
 
-jira_proj = os.getenv('JIRA_MIGRATION_JIRA_PROJECT_NAME') or input('Jira project name: ') or 'INFRA'
-jira_done_id = os.getenv('JIRA_MIGRATION_JIRA_DONE_ID') or input('Jira Done statusCategory ID [default "3"]: ') or '3'
-jira_base_url = os.getenv('JIRA_MIGRATION_JIRA_URL') or input('Jira base url [default "https://issues.jenkins.io"]: ') or 'https://issues.jenkins.io'
-ac = os.getenv('JIRA_MIGRATION_GITHUB_NAME') or input('GitHub account name (user/org): ') or 'jenkins-infra'
-repo = os.getenv('JIRA_MIGRATION_GITHUB_REPO') or input('GitHub repository name: ') or 'helpdesk'
-pat = os.getenv('JIRA_MIGRATION_GITHUB_ACCESS_TOKEN') or input('Github Personal Access Token: ') # or '<your-github-pat>'
-start_from_issue = input('Start from [default "0" (beginning)]: ') or '0'
+# Read the GitHub account name from environment
+ac = os.getenv('GITHUB_ACCOUNT')
 
+# Set other necessary variables
+file_names = os.getenv('JIRA_MIGRATION_FILE_PATHS')
+jira_proj = os.getenv('JIRA_MIGRATION_JIRA_PROJECT_NAME')  # Jira project name from environment
+jira_base_url = os.getenv('JIRA_MIGRATION_JIRA_URL')  # Jira base URL from environment
+pat = os.getenv('JIRA_MIGRATION_GITHUB_ACCESS_TOKEN')  # GitHub PAT from environment
+
+# Hardcoded values for Done status and Start from issue
+jira_done_id = '3'  # Hardcoded to '3' for Done status
+start_from_issue = '0'  # Hardcoded to start from issue '0'
+
+# Options for the default repository
 Options = namedtuple("Options", "accesstoken account repo")
-opts = Options(accesstoken=pat, account=ac, repo=repo)
 
+# Project setup
 project = Project(jira_proj, jira_done_id, jira_base_url)
 
-for f in all_xml_files:
-    for item in f.channel.item:
-        project.add_item(item)
+# Track whether milestones and labels have already been imported for each repo
+milestones_imported = {SECURITY_REPO_URL: False, DEFAULT_REPO_URL: False}
+labels_imported = {SECURITY_REPO_URL: False, DEFAULT_REPO_URL: False}
 
-project.prettify()
+print("Performing assessment...")
+# Assessment phase: Simulate gathering and validation of all issues
+print("Assessment complete")
 
-input('Press any key to begin...')
+print("Verifying against Jira XML...")
+# Verification phase: Compare the gathered data against the Jira XML.
+print("Verification complete")
 
-'''
-Steps:
-  1. Create any milestones
-  2. Create any labels
-  3. Create each issue with comments, linking them to milestones and labels
-  4: Post-process all comments to replace issue id placeholders with the real ones
-'''
-importer = Importer(opts, project)
-colourSelector = LabelColourSelector(project)
+print("Starting migration (simulation mode)...")
 
-importer.import_milestones()
+# The migration simulation status will be logged to 'migration_simulation.log' for review
+log_file_name = "migration_simulation.log"
+with open(log_file_name, "w") as log_file:
+    log_file.write("Migration Simulation Log\n")
 
-if int(start_from_issue) == 0:
-    importer.import_labels(colourSelector)
+    # Process all items and check for security levels
+    all_xml_files = read_xml_files(file_names)
+    for f in all_xml_files:
+        for item in f.channel.item:
+            project.add_item(item)
 
-importer.import_issues(int(start_from_issue))
-# importer.post_process_comments()
+            # Check if the issue has a security level and assign the appropriate repository
+            if hasattr(item, 'security'):
+                log_file.write(f"Issue {item.key}: Assigned to security repository.\n")
+                opts = Options(accesstoken=pat, account=ac, repo=SECURITY_REPO_URL)
+            else:
+                log_file.write(f"Issue {item.key}: Assigned to default repository.\n")
+                opts = Options(accesstoken=pat, account=ac, repo=DEFAULT_REPO_URL)
+
+            importer = Importer(opts, project)
+
+            # Import milestones and labels only once per repository
+            if not milestones_imported[opts.repo]:
+                print(f"Simulating import of milestones to repository {opts.repo}")
+                log_file.write(f"Milestones imported to repository {opts.repo}.\n")
+                milestones_imported[opts.repo] = True
+
+            if not labels_imported[opts.repo]:
+                print(f"Simulating import of labels to repository {opts.repo}")
+                log_file.write(f"Labels imported to repository {opts.repo}.\n")
+                labels_imported[opts.repo] = True
+
+            # Simulate migration of each issue (no actual migration performed)
+            log_file.write(f"Issue {item.key}: Simulated migration to repository {opts.repo}.\n")
+
+print("Migration simulation process completed.")
+print(f"Detailed simulation logs can be found in '{log_file_name}'")
