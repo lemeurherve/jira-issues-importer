@@ -5,48 +5,45 @@ set -e -o pipefail
 # Run this over issues to:
 # - add epic children to epics
 
-OWNER=${1:-timja}
-REPO=${2:-jenkins-gh-issues-poc-06-18}
+OWNER=${1:-timja-org}
+REPO=${2:-jenkins-gh-issues-poc-11-04}
 START_FROM=${3:-0}
 
-ALL_ISSUES=$(gh issue list -R ${OWNER}/${REPO} --limit=20000 --state=all --json number,labels)
-ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES}"| jq '.[].number' | sort -g | uniq)
+echo "Fetching all issues from ${OWNER}/${REPO}"
+ALL_ISSUES=$(gh issue list -R ${OWNER}/${REPO} --limit 20000 --state=all --json number,labels)
+echo "Fetched all issues"
 
-while IFS= read -r ISSUE_CHECKING; do
-  if (( ISSUE_CHECKING < START_FROM )); then
-    continue
+# Function to process issues with a specific label and type
+process_issue_type() {
+  local label=$1
+  local type=$2
+  
+  echo "Processing issues with label '$label' as type '$type'"
+  
+  ALL_ISSUES_OF_TYPE=$(echo "${ALL_ISSUES}" | jq --arg LABEL "$label" '[.[] | select(.labels[].name == $LABEL)]')
+  ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES_OF_TYPE}"| jq '.[].number' | sort -g | uniq)
+
+  if [ -z "${ALL_ISSUE_NUMBERS}" ]; then
+    echo "No issues found with label '$label'"
+    return
   fi
-  echo "Checking $ISSUE_CHECKING"
-  COMMENT=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[].body | select(contains("[Epic:"))')
 
-  if [ -n "$COMMENT"  ]
-  then
-    JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -r 's#^.*<a href="[^"]+">([^<]+)</a>.*$#\1#')
-    echo "Found epic $JIRA_ISSUE_KEY"
+  COUNT=$(echo "${ALL_ISSUE_NUMBERS}" | wc -l | tr -d ' ')
+  echo "Found $COUNT issues with label '$label'"
 
-    EPIC_ISSUES_JSON=$(gh search issues --owner ${OWNER} --repo ${REPO} --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
-
-
-    EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\"${OWNER}/${REPO}\"').number')
-    # can be empty if epic is not in core component
-    if [ -n "$EPIC_ISSUE_NUMBER"  ]
-    then
-      echo "Found issue for epic: $EPIC_ISSUE_NUMBER"
-
-      BODY=$(gh issue view -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" --json body --jq '.body')
-
-      if [[ "$BODY" == *"Epic children:"* ]]; then
-        BODY+="
-- #${ISSUE_CHECKING}"
-      else
-       BODY+=$"
-Epic children:
-
-- #${ISSUE_CHECKING}"
-      fi
-      gh issue edit -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" --body "${BODY}"
+  while IFS= read -r ISSUE_CHECKING; do
+    if (( ISSUE_CHECKING < START_FROM )); then
+      continue
     fi
+    echo "Checking $ISSUE_CHECKING"
+    gh api -X PATCH repos/$OWNER/$REPO/issues/$ISSUE_CHECKING --field type="$type" > /dev/null
+    gh issue edit --remove-label "$label" -R ${OWNER}/${REPO} "${ISSUE_CHECKING}"
 
-  fi
+  done <<< "${ALL_ISSUE_NUMBERS}"
+}
 
-done <<< "${ALL_ISSUE_NUMBERS}"
+process_issue_type "rfe" "Enhancement"
+process_issue_type "bug" "Bug"
+
+# handles an edge case where there are some epics with no issues
+process_issue_type "epic" "Epic"
