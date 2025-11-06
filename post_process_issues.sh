@@ -3,7 +3,7 @@
 set -e -o pipefail
 
 # Run this over issues to:
-# - add epic children to epics
+# - convert issues to the right type and remove labels
 
 OWNER=${1:-timja-org}
 REPO=${2:-jenkins-gh-issues-poc-11-04}
