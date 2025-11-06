@@ -7,7 +7,6 @@ set -e -o pipefail
 
 OWNER=${1:-timja-org}
 REPO=${2:-jenkins-gh-issues-poc-11-04}
-START_FROM=${3:-0}
 
 echo "Fetching all issues from ${OWNER}/${REPO}"
 ALL_ISSUES=$(gh issue list -R ${OWNER}/${REPO} --limit 20000 --state=all --json number,labels)
@@ -32,9 +31,6 @@ process_issue_type() {
   echo "Found $COUNT issues with label '$label'"
 
   while IFS= read -r ISSUE_CHECKING; do
-    if (( ISSUE_CHECKING < START_FROM )); then
-      continue
-    fi
     echo "Checking $ISSUE_CHECKING"
     gh api -X PATCH repos/$OWNER/$REPO/issues/$ISSUE_CHECKING --field type="$type" > /dev/null
     gh issue edit --remove-label "$label" -R ${OWNER}/${REPO} "${ISSUE_CHECKING}"
