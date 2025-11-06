@@ -105,6 +105,16 @@ class Project:
         body = self._htmlentitydecode(item.description.text)
         # metadata: original author & link
 
+        try:
+            attachments = []
+            for attachment in item.attachments.attachment:
+                attachment = '\n- [' + attachment.get('name') + '](' + self.jiraBaseUrl + '/secure/attachment/' + attachment.get('id') + '/' + attachment.get('name') + ')'
+                attachments.append(attachment)
+            if len(attachments) > 0:
+                body = body + '\n\n**Attachments:**\n' + ''.join(attachments)
+        except AttributeError:
+            pass
+
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
         # metadata: assignee
         body = body + '\n<i><ul>'
