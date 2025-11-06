@@ -20,7 +20,9 @@ while IFS= read -r ISSUE_CHECKING; do
     continue
   fi
   echo "Checking $ISSUE_CHECKING"
-  COMMENT=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[].body | select(contains("[Epic:"))')
+  COMMENT_JSON=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[] | select(any(.body; contains("[Epic:")))')
+  COMMENT=$(echo "$COMMENT_JSON" | jq -r '.body')
+  COMMENT_NUMBER=$(echo "$COMMENT_JSON" | jq -r '.url' | awk -F 'issuecomment-' '{print $2}')
 
   if [ -n "$COMMENT"  ]
   then
@@ -28,7 +30,6 @@ while IFS= read -r ISSUE_CHECKING; do
     echo "Found epic $JIRA_ISSUE_KEY"
 
     EPIC_ISSUES_JSON=$(gh search issues --owner ${OWNER} --repo ${REPO} --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
-
     EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\"${OWNER}/${REPO}\"').number')
     # can be empty if epic is not in core component
     if [ -n "$EPIC_ISSUE_NUMBER"  ]
@@ -42,7 +43,14 @@ while IFS= read -r ISSUE_CHECKING; do
       # no cli support https://github.com/cli/cli/issues/9696
       gh api -X PATCH repos/$OWNER/$REPO/issues/$EPIC_ISSUE_NUMBER --field type=Epic > /dev/null
       gh issue edit --remove-label epic -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}"
+
+      gh api \
+        --method DELETE \
+        -H "Accept: application/vnd.github+json" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        /repos/$OWNER/$REPO/issues/comments/$COMMENT_NUMBER
     fi
+  fi
 done <<< "${ALL_ISSUE_NUMBERS}"
 
 echo "Finished epic processing"

@@ -110,6 +110,8 @@ class Project:
         body = body + '\n<i><ul>'
         if item.assignee != 'Unassigned':
             body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
+        # include to make searching by reporter easier
+        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
         try:
             body = body + '\n<li><b>status</b>: ' + item.status
         except AttributeError:
@@ -126,6 +128,8 @@ class Project:
             body = body + '\n<li><b>resolved</b>: ' + self._convert_to_iso(item.resolved.text)
         except AttributeError:
             pass
+        body = body + '\n<li><b>votes</b>: ' + str(item.votes)
+        body = body + '\n<li><b>watchers</b>: ' + str(item.watches)
         body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
         body = body + '\n</ul></i>\n</details>'
 
