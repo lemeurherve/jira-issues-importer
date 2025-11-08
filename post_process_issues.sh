@@ -34,6 +34,7 @@ process_issue_type() {
     echo "Checking $ISSUE_CHECKING"
     gh api -X PATCH repos/$OWNER/$REPO/issues/$ISSUE_CHECKING --field type="$type" > /dev/null
     gh issue edit --remove-label "$label" -R ${OWNER}/${REPO} "${ISSUE_CHECKING}"
+    sleep 2
 
   done <<< "${ALL_ISSUE_NUMBERS}"
 }

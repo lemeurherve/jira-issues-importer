@@ -49,6 +49,7 @@ while IFS= read -r ISSUE_CHECKING; do
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         /repos/$OWNER/$REPO/issues/comments/$COMMENT_NUMBER
+      sleep 1
     fi
   fi
 done <<< "${ALL_ISSUE_NUMBERS}"
