@@ -1,0 +1,17 @@
+# Per https://docs.github.com/en/github/administering-a-repository/configuration-options-for-dependency-updates
+version: 2
+updates:
+
+# GitHub actions
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  groups:
+    python-packages:
+      patterns:
+        - "*"
