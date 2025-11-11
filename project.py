@@ -5,7 +5,7 @@ from dateutil.parser import parse
 from datetime import datetime
 import re
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
+from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, proper_label_str
 
 
 class Project:
@@ -102,6 +102,19 @@ class Project:
         # TODO: ensure item.assignee/reporter.get('username') to avoid "JENKINSUSER12345"
         # TODO: fixit in gh issues
 
+        # retrieve jira components and labels as github labels (add 'imported-jira-issue' label by default)
+        labels = ['imported-jira-issue']
+        for component in item.component:
+            if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
+                labels.append('component:' + proper_label_str(component.text))
+
+        labels.append(self._jira_type_mapping(item.type.text.lower()))
+
+        for label in item.labels.findall('label'):
+            converted_label = convert_label(proper_label_str(label.text), self.labels_mapping, self.approved_labels)
+            if converted_label is not None:
+                labels.append(converted_label)
+
         body = self._htmlentitydecode(item.description.text)
         # metadata: original author & link
 
@@ -153,22 +166,6 @@ class Project:
         except AttributeError:
             pass
 
-        # retrieve jira components and labels as github labels
-        labels = []
-        for component in item.component:
-            if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
-                labels.append('jira-component:' + component.text.lower())
-                labels.append(component.text.lower())
-
-        labels.append(self._jira_type_mapping(item.type.text.lower()))
-        
-        for label in item.labels.findall('label'):
-            converted_label = convert_label(label.text.strip().lower(), self.labels_mapping, self.approved_labels)
-            if converted_label is not None:
-                labels.append(converted_label)
-
-        labels.append('imported-jira-issue')
-
         unique_labels = list(set(labels))
 
         self._project['Issues'].append({'title': item.title.text,
@@ -193,17 +190,17 @@ class Project:
         if issue_type == 'bug':
             return 'bug'
         if issue_type == 'improvement':
-            return 'rfe'
+            return 'enhancement'
         if issue_type == 'new feature':
-            return 'rfe'
+            return 'enhancement'
         if issue_type == 'task':
-            return 'rfe'
+            return 'jira-type:task'
         if issue_type == 'story':
-            return 'rfe'
+            return 'jira-type:story'
         if issue_type == 'patch':
-            return 'rfe'
+            return 'jira-type:patch'
         if issue_type == 'epic':
-            return 'epic'
+            return 'jira-type:epic'
 
     def _convert_to_iso(self, timestamp):
         dt = parse(timestamp)

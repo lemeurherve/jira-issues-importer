@@ -32,6 +32,8 @@ def convert_label(label, labels_mappings, approved_labels):
         return mapped_label
     return None
 
+def proper_label_str(label):
+    return label.lower().strip().replace(' ', '-').replace("'", '')
 
 def read_xml_file(file_path):
     with open(file_path) as file:
