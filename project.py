@@ -122,7 +122,7 @@ class Project:
             # Remove empty lines
             lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
             if len(lines) > 1:
-                environment_txt = '<details><summary>environment</summary><code>' + '\n'.join(lines) + '</code></details>'
+                environment_txt = '<details><summary>environment</summary>\n\n```\n' + '\n'.join(lines) + '\n```\n</details>'
             body = body + '\n<li>' + environment_txt
         except AttributeError:
             pass
