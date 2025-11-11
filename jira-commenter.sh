@@ -56,7 +56,7 @@ while IFS=':' read -ra mapping; do
     commenting_api_url="${issue_api_url}/comment"
 
     # Add export comment to Jira issue and pin it
-    body="For your information, [all ${JIRA_MIGRATION_JIRA_PROJECT_NAME} issues|${JIRA_MIGRATION_JIRA_URL}/projects/${JIRA_MIGRATION_JIRA_PROJECT_NAME}/issues/] related to the [${JIRA_MIGRATION_JIRA_PROJECT_DESC}|${JIRA_MIGRATION_JIRA_PROJECT_LINK}] have been transferred to Github: ${github_issues_link}\n\nHere is the direct link to this issue in Github: ${github_issues_link}/${github_issue_id}\nAnd here is the link to a search for related issues: ${github_issues_link}?q=%22${jira_issue_key}%22\n\n(Note: this is an automated bulk comment)"
+    body="For your information, [all ${JIRA_MIGRATION_JIRA_PROJECT_NAME} issues|${JIRA_MIGRATION_JIRA_URL}/projects/${JIRA_MIGRATION_JIRA_PROJECT_NAME}/issues/] related to the [${JIRA_MIGRATION_JIRA_PROJECT_DESC}|${JIRA_MIGRATION_JIRA_PROJECT_LINK}] have been transferred to Github: ${github_issues_link}\n\nHere is the direct link to this issue in Github: ${github_issues_link}${github_issue_id}\nAnd here is the link to a search for related issues: ${github_issues_link}?q=%22${jira_issue_key}%22\n\n(Note: this is an automated bulk comment)"
     result=$(curl \
         --silent \
         -H "Content-Type: application/json" \
