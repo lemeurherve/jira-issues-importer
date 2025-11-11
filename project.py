@@ -117,6 +117,16 @@ class Project:
         except AttributeError:
             pass
         try:
+            environment_txt = '<b>environment</b>: <code>' + item.environment + '</code>'
+            lines = str(item.environment).splitlines()
+            # Remove empty lines
+            lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
+            if len(lines) > 1:
+                environment_txt = '<details><summary>environment</summary><code>' + '\n'.join(lines) + '</code></details>'
+            body = body + '\n<li>' + environment_txt
+        except AttributeError:
+            pass
+        try:
             body = body + '\n<li><b>priority</b>: ' + item.priority
         except AttributeError:
             pass
