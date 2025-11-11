@@ -102,6 +102,20 @@ class Project:
         # TODO: ensure item.assignee/reporter.get('username') to avoid "JENKINSUSER12345"
         # TODO: fixit in gh issues
 
+        # retrieve jira components and labels as github labels (add 'imported-jira-issue' label by default)
+        labels = ['imported-jira-issue']
+        for component in item.component:
+            if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
+                labels.append('jira-component:' + component.text.lower())
+                labels.append(component.text.lower())
+
+        labels.append(self._jira_type_mapping(item.type.text.lower()))
+
+        for label in item.labels.findall('label'):
+            converted_label = convert_label(label.text.strip().lower(), self.labels_mapping, self.approved_labels)
+            if converted_label is not None:
+                labels.append(converted_label)
+
         body = self._htmlentitydecode(item.description.text)
         # metadata: original author & link
 
@@ -152,22 +166,6 @@ class Project:
                 body = body + '\n<details><summary><i>Attachments:</i></summary>\n' + ''.join(attachments) + '\n</details>'
         except AttributeError:
             pass
-
-        # retrieve jira components and labels as github labels
-        labels = []
-        for component in item.component:
-            if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
-                labels.append('jira-component:' + component.text.lower())
-                labels.append(component.text.lower())
-
-        labels.append(self._jira_type_mapping(item.type.text.lower()))
-        
-        for label in item.labels.findall('label'):
-            converted_label = convert_label(label.text.strip().lower(), self.labels_mapping, self.approved_labels)
-            if converted_label is not None:
-                labels.append(converted_label)
-
-        labels.append('imported-jira-issue')
 
         unique_labels = list(set(labels))
 
