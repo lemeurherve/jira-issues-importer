@@ -3,7 +3,7 @@ class LabelColourSelector:
         self._project = project
 
     def get_colour(self, label):
-        elif label == 'jira-type:epic':
+        if label == 'jira-type:epic':
             return 'ddf4dd'
         elif label.startwith('jira-type:'):
             return '7bc043'
