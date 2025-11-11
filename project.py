@@ -5,7 +5,7 @@ from dateutil.parser import parse
 from datetime import datetime
 import re
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
+from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, proper_label_str
 
 
 class Project:
@@ -106,8 +106,7 @@ class Project:
         labels = ['imported-jira-issue']
         for component in item.component:
             if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
-                labels.append('jira-component:' + component.text.lower())
-                labels.append(component.text.lower())
+                labels.append('component:' + proper_label_str(component.text))
 
         labels.append(self._jira_type_mapping(item.type.text.lower()))
 
@@ -191,17 +190,17 @@ class Project:
         if issue_type == 'bug':
             return 'bug'
         if issue_type == 'improvement':
-            return 'rfe'
+            return 'enhancement'
         if issue_type == 'new feature':
-            return 'rfe'
+            return 'enhancement'
         if issue_type == 'task':
-            return 'rfe'
+            return 'jira-type:task'
         if issue_type == 'story':
-            return 'rfe'
+            return 'jira-type:story'
         if issue_type == 'patch':
-            return 'rfe'
+            return 'jira-type:patch'
         if issue_type == 'epic':
-            return 'epic'
+            return 'jira-type:epic'
 
     def _convert_to_iso(self, timestamp):
         dt = parse(timestamp)
