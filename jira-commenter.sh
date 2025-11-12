@@ -13,11 +13,29 @@ set -euo pipefail
 : "${JIRA_MIGRATION_GITHUB_NAME:? Missing GitHub org name (e.g., jenkins-infra)}"
 : "${JIRA_MIGRATION_GITHUB_REPO:? Missing GitHub repo name (e.g., helpdesk)}"
 
+: "${IS_USER_JIRA_ADMIN:=false}" # whether the user is a Jira admin
+: "${DONT_NOTIFY_JIRA_USERS:=false}" # whether to notify Jira users after labeling and updating issues (need admin rights)
+: "${ARCHIVE_JIRA_ISSUES:=false}" # whether to archive Jira issues after commenting and labeling (need admin rights)
+
 : "${JIRA_GITHUB_MAPPING_FILE:=jira-keys-to-github-id.txt}" # with each line containing <JENKINS-ISSUE-KEY>:<GITHUB-ISSUE-KEY>, ex: "INFRA-545:415"
 : "${COMMENTS_FILE:=jira-comments.txt}" # with each line containing <JENKINS-ISSUE-KEY>:<GITHUB-ISSUE-KEY>:<JIRA-COMMENT-ID>:<JIRA-COMMENT-SELF-LINK>, ex: "INFRA-545:415:457400:https://issues.jenkins.io/rest/api/2/issue/224778/comment/457400"
 : "${EXPORTED_LABEL:=issue-exported-to-github}" # label to add to issues that have been exported
+: "${JIRA_MIGRATION_ADDITIONAL_INFO:=}" # additional info to add to the comment body
 
 github_issues_link="https://github.com/${JIRA_MIGRATION_GITHUB_NAME}/${JIRA_MIGRATION_GITHUB_REPO}/issues/"
+
+notify_users_param=""
+archive_issues=false
+if [[ "${IS_USER_JIRA_ADMIN}" = true ]]; then
+    if [[ "${DONT_NOTIFY_JIRA_USERS}" = true ]]; then
+        notify_users_param="notifyUsers=false"
+    fi
+    if [[ "${ARCHIVE_JIRA_ISSUES}" = true ]]; then
+        archive_issues=true
+    fi
+else
+    echo "Warning: User is not a Jira admin, can't set notifyUsers parameter or archive issues."
+fi
 
 echo "Check ${JIRA_MIGRATION_JIRA_URL} connectivity"
 response_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}" "${JIRA_MIGRATION_JIRA_URL}/rest/api/2/myself")
@@ -39,14 +57,14 @@ while IFS=':' read -ra mapping; do
     commenting_api_url="${issue_api_url}/comment"
 
     # Add export comment to Jira issue and pin it
-    body="For your information, [all ${JIRA_MIGRATION_JIRA_PROJECT_NAME} issues|${JIRA_MIGRATION_JIRA_URL}/projects/${JIRA_MIGRATION_JIRA_PROJECT_NAME}/issues/] related to the [${JIRA_MIGRATION_JIRA_PROJECT_DESC}|${JIRA_MIGRATION_JIRA_PROJECT_LINK}] have been transferred to Github: ${github_issues_link}\n\nHere is the direct link to this issue in Github: ${github_issues_link}${github_issue_id}\nAnd here is the link to a search for related issues: ${github_issues_link}?q=%22${jira_issue_key}%22\n\n(Note: this is an automated bulk comment)"
+    body="All issues for ${JIRA_MIGRATION_JIRA_PROJECT_DESC} have been migrated to [GitHub|${github_issues_link}]\n\nHere is the link to this issue on GitHub: ${github_issues_link}${github_issue_id}\n\nTo find related issues use this search: ${github_issues_link}?q=%22${jira_issue_key}%22${JIRA_MIGRATION_ADDITIONAL_INFO}\n\n(_Note: this is an automated bulk comment_)"
     result=$(curl \
         --silent \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}" \
         -X POST \
         --data "{\"body\": \"${body}\"}" \
-    "${commenting_api_url}")
+    "${commenting_api_url}?${notify_users_param}")
 
     echo "${result}" | jq > "issue_comment_on_${jira_issue_key}_${github_issue_id}.json"
 
@@ -69,11 +87,21 @@ while IFS=':' read -ra mapping; do
     # Add exported label to Jira issue
     echo "Add label '${EXPORTED_LABEL}' to issue ${jira_issue_key}"
     editmeta_data="{ \"update\": { \"labels\": [{\"add\": \"${EXPORTED_LABEL}\" }] } }"
-    curl "${issue_api_url}" \
+    curl "${issue_api_url}?${notify_users_param}" \
         --silent \
         -X PUT \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}" \
         --data "${editmeta_data}"
+
+
+    if [[ "${archive_issues}" = true ]]; then
+        echo "Archive the issue ${jira_issue_key}"
+        curl "${issue_api_url}/archive?${notify_users_param}" \
+            --silent \
+            -X PUT \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}"
+    fi
 
 done <"${JIRA_GITHUB_MAPPING_FILE}"
