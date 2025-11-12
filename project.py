@@ -116,7 +116,13 @@ class Project:
             if converted_label is not None:
                 labels.append(converted_label)
 
-        body = self._htmlentitydecode(item.description.text)
+        raw_body = self._htmlentitydecode(item.description.text)
+
+        # Cleanup of {noformat} Jira rendered HTML by replacing the generated <div>s and <pre>
+        # by a ``` code block (with an empty line before to ensure proper rendering on GitHub)
+        raw_body = raw_body.replace('<div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">\n<pre>', '\n\n```')
+        body = raw_body.replace('</pre>\n</div></div>', '```')
+
         # metadata: original author & link
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
         body = body + '\n<i><ul>'
