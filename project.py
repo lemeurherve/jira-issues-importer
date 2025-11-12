@@ -130,11 +130,15 @@ class Project:
         except AttributeError:
             pass
         try:
-            body = body + '\n<li><b>priority</b>: ' + item.priority
+            priority_txt = item.priority.text
+            body = body + '\n<li><b>priority</b>: ' + priority_txt
+            labels.append('priority:' + proper_label_str(priority_txt))
         except AttributeError:
             pass
         try:
-            body = body + '\n<li><b>resolution</b>: ' + item.resolution
+            resolution_txt = item.resolution.text
+            body = body + '\n<li><b>resolution</b>: ' + resolution_txt
+            labels.append('resolution:' + proper_label_str(resolution_txt))
         except AttributeError:
             pass
         try:
