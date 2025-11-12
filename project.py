@@ -192,7 +192,7 @@ class Project:
 
                 attachments.append('\n- ' + attachment_txt)
             if len(attachments) > 0:
-                summary = str(len(attachments)) + ' attachments' if len(attachments) > 1 else ' attachment'
+                summary = str(len(attachments)) + ' attachments' if len(attachments) > 1 else '1 attachment'
                 body = body + '\n<details><summary><i>' + summary + '</i></summary>\n' + ''.join(attachments) + '\n</details>'
         except AttributeError:
             pass
