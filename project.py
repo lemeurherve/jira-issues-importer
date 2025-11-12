@@ -4,6 +4,7 @@ from html.entities import name2codepoint
 from dateutil.parser import parse
 from datetime import datetime
 import re
+from urllib.parse import quote
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, proper_label_str
 
@@ -191,10 +192,11 @@ class Project:
             for attachment in item.attachments.attachment:
                 attachment_name = attachment.get('name')
                 attachment_extension = os.path.splitext(attachment_name)[1].lower()
-                attachment_txt = '[{0}]({1}/secure/attachment/{2}/{0})'.format(
+                attachment_txt = '[{0}]({1}/secure/attachment/{2}/{3})'.format(
                     attachment_name,
                     self.jiraBaseUrl,
-                    attachment.get('id')
+                    attachment.get('id'),
+                    quote(attachment_name),
                 )
                 if attachment_extension in image_extensions:
                     attachment_txt = attachment_txt + '\n  > !' + attachment_txt
