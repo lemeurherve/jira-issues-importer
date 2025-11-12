@@ -153,6 +153,51 @@ def parse_user_profile(html_content, user_id, profile_url):
         if table_data:
             user_data['sections'][f'table_{i}'] = table_data
 
+    # Extract "Assigned Open Issues per Project" section
+    assigned_issues = []
+    # Look for the heading
+    assigned_heading = soup.find(text=re.compile(r'Assigned Open Issues per Project', re.IGNORECASE))
+    if assigned_heading:
+        # Find the parent element and look for the list of projects
+        parent = assigned_heading.find_parent()
+        if parent:
+            # Look for list items or links after this heading
+            next_elem = parent.find_next_sibling()
+            if next_elem:
+                # Try to find project links
+                project_items = next_elem.find_all(['li', 'a', 'div'])
+                for item in project_items:
+                    # Look for project links
+                    links = item.find_all('a')
+                    for link in links:
+                        project_name = link.get_text(strip=True)
+                        if project_name and project_name not in assigned_issues:
+                            assigned_issues.append(project_name)
+
+    # Always set assigned_open_issues, even if empty
+    user_data['assigned_open_issues'] = assigned_issues
+
+    # Extract "Groups" section
+    groups = []
+    # Look for the heading
+    groups_heading = soup.find(text=re.compile(r'^Groups$', re.IGNORECASE))
+    if groups_heading:
+        # Find the parent element and look for the list of groups
+        parent = groups_heading.find_parent()
+        if parent:
+            # Look for list items after this heading
+            next_elem = parent.find_next_sibling()
+            if next_elem:
+                # Try to find group items
+                group_items = next_elem.find_all('li')
+                for item in group_items:
+                    group_name = item.get_text(strip=True)
+                    if group_name:
+                        groups.append(group_name)
+
+    # Always set groups, even if empty
+    user_data['groups'] = groups
+
     # Extract any additional structured data
     # Look for divs with id or class that might contain user info
     user_profile_div = soup.find('div', id='user-profile-panel')
