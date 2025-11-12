@@ -51,7 +51,9 @@ def get_session():
 
 def fetch_user_profile(session, user_id):
     """Fetch and parse a user profile page."""
-    url = f'{JIRA_SERVER}/secure/ViewProfile.jspa?id={user_id}'
+    # JIRAUSER* IDs need to use ?id= parameter instead of ?name=
+    param = 'id' if user_id.startswith('JIRAUSER') else 'name'
+    url = f'{JIRA_SERVER}/secure/ViewProfile.jspa?{param}={user_id}'
     print(f"Fetching profile for {user_id}...")
 
     try:
