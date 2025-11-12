@@ -104,18 +104,9 @@ class Project:
 
         body = self._htmlentitydecode(item.description.text)
         # metadata: original author & link
-
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
-        # metadata: assignee
         body = body + '\n<i><ul>'
-        if item.assignee != 'Unassigned':
-            body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
-        # include to make searching by reporter easier
-        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
-        try:
-            body = body + '\n<li><b>status</b>: ' + item.status
-        except AttributeError:
-            pass
+        # metadata: environment
         try:
             environment_txt = '<b>environment</b>: <code>' + item.environment + '</code>'
             lines = str(item.environment).splitlines()
@@ -126,14 +117,27 @@ class Project:
             body = body + '\n<li>' + environment_txt
         except AttributeError:
             pass
+        # metadata: assignee
+        if item.assignee != 'Unassigned':
+            body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
+        # include to make searching by reporter easier
+        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
+        # metadata: status
+        try:
+            body = body + '\n<li><b>status</b>: ' + item.status
+        except AttributeError:
+            pass
+        # metadata: priority
         try:
             body = body + '\n<li><b>priority</b>: ' + item.priority
         except AttributeError:
             pass
+        # metadata: resolution
         try:
             body = body + '\n<li><b>resolution</b>: ' + item.resolution
         except AttributeError:
             pass
+        # metadata: resolved
         try:
             body = body + '\n<li><b>resolved</b>: ' + self._convert_to_iso(item.resolved.text)
         except AttributeError:
