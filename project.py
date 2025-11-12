@@ -119,27 +119,19 @@ class Project:
         # metadata: original author & link
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
         body = body + '\n<i><ul>'
-        # metadata: environment
-        try:
-            environment_txt = '<b>environment</b>: <code>' + item.environment + '</code>'
-            lines = str(item.environment).splitlines()
-            # Remove empty lines
-            lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
-            if len(lines) > 1:
-                environment_txt = '<details><summary>environment</summary>\n\n```\n' + '\n'.join(lines) + '\n```\n</details>'
-            body = body + '\n<li>' + environment_txt
-        except AttributeError:
-            pass
+
         # metadata: assignee
         if item.assignee != 'Unassigned':
             body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
         # include to make searching by reporter easier
         body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
+
         # metadata: status
         try:
             body = body + '\n<li><b>status</b>: ' + item.status
         except AttributeError:
             pass
+
         # metadata: priority
         try:
             priority_txt = item.priority.text
@@ -147,6 +139,7 @@ class Project:
             labels.append('priority:' + proper_label_str(priority_txt))
         except AttributeError:
             pass
+
         # metadata: resolution
         try:
             resolution_txt = item.resolution.text
@@ -154,6 +147,7 @@ class Project:
             labels.append('resolution:' + proper_label_str(resolution_txt))
         except AttributeError:
             pass
+
         # metadata: resolved
         try:
             body = body + '\n<li><b>resolved</b>: ' + self._convert_to_iso(item.resolved.text)
@@ -164,6 +158,19 @@ class Project:
         body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
         body = body + '\n</ul></i>\n</details>'
 
+        # metadata: environment
+        try:
+            environment_txt = '<ul><li><i>environment</i>: <code>' + item.environment + '</code></li></ul>'
+            lines = str(item.environment).splitlines()
+            # Remove empty lines
+            lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
+            if len(lines) > 1:
+                environment_txt = '<details><summary><i>environment</i></summary>\n\n```\n' + '\n'.join(lines) + '\n```\n</details>'
+            body = body + '\n' + environment_txt
+        except AttributeError:
+            pass
+
+        # metadata: attachments
         try:
             attachments = []
             image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg']
