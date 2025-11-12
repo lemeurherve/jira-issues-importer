@@ -20,6 +20,7 @@ set -euo pipefail
 : "${JIRA_GITHUB_MAPPING_FILE:=jira-keys-to-github-id.txt}" # with each line containing <JENKINS-ISSUE-KEY>:<GITHUB-ISSUE-KEY>, ex: "INFRA-545:415"
 : "${COMMENTS_FILE:=jira-comments.txt}" # with each line containing <JENKINS-ISSUE-KEY>:<GITHUB-ISSUE-KEY>:<JIRA-COMMENT-ID>:<JIRA-COMMENT-SELF-LINK>, ex: "INFRA-545:415:457400:https://issues.jenkins.io/rest/api/2/issue/224778/comment/457400"
 : "${EXPORTED_LABEL:=issue-exported-to-github}" # label to add to issues that have been exported
+: "${JIRA_MIGRATION_ADDITIONAL_INFO:=}" # additional info to add to the comment body
 
 github_issues_link="https://github.com/${JIRA_MIGRATION_GITHUB_NAME}/${JIRA_MIGRATION_GITHUB_REPO}/issues/"
 
@@ -56,7 +57,7 @@ while IFS=':' read -ra mapping; do
     commenting_api_url="${issue_api_url}/comment"
 
     # Add export comment to Jira issue and pin it
-    body="All issues for ${JIRA_MIGRATION_JIRA_PROJECT_DESC} have been migrated to [GitHub|${github_issues_link}]\n\nHere is the link to this issue on GitHub: ${github_issues_link}${github_issue_id}\n\nTo find related issues use this search: ${github_issues_link}?q=%22${jira_issue_key}%22\n\n(_Note: this is an automated bulk comment_)"
+    body="All issues for ${JIRA_MIGRATION_JIRA_PROJECT_DESC} have been migrated to [GitHub|${github_issues_link}]\n\nHere is the link to this issue on GitHub: ${github_issues_link}${github_issue_id}\n\nTo find related issues use this search: ${github_issues_link}?q=%22${jira_issue_key}%22${JIRA_MIGRATION_ADDITIONAL_INFO}\n\n(_Note: this is an automated bulk comment_)"
     result=$(curl \
         --silent \
         -H "Content-Type: application/json" \
