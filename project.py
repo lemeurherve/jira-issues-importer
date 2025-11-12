@@ -116,7 +116,8 @@ class Project:
             if converted_label is not None:
                 labels.append(converted_label)
 
-        body = self._htmlentitydecode(item.description.text)
+        body = self._clean_html(item.description.text)
+
         # metadata: original author & link
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
         body = body + '\n<i><ul>'
@@ -305,7 +306,7 @@ class Project:
             for comment in item.comments.comment:
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
-                     "body": '<i><a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + comment.get('author') + '">' + comment.get('author') + '</a>:</i>\n' + self._htmlentitydecode(comment.text)
+                     "body": '<i><a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + comment.get('author') + '">' + comment.get('author') + '</a>:</i>\n' + self._clean_html(comment.text)
                      })
         except AttributeError:
             pass
@@ -347,3 +348,18 @@ class Project:
         s = s.replace(' ' * 8, '')
         return re.sub('&(%s);' % '|'.join(name2codepoint),
                       lambda m: chr(name2codepoint[m.group(1)]), s)
+
+    def _clean_html(self, s):
+        if s is None:
+            return ''
+        s = self._htmlentitydecode(s)
+        # Cleanup of Jira specific markup rendered HTML with non-greedy multiline regexps
+        # Handle {code}: need special handling as Jira insert HTML spans for {code} block content highlighting
+        s = re.sub(r'<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">\n<pre class="code-[^"]*">(.*?)</pre>\n</div></div>', r'\n<pre>\n\1</pre>', s, flags=re.DOTALL)
+        # Handle {noformat}
+        s = re.sub(r'<div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">\n<pre>(.*?)</pre>\n</div></div>', r'\n\n```\n\1```', s, flags=re.DOTALL)
+        # Handle {panel:title}: processed first to avoid matching by the no-title pattern
+        s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelHeader" style="border-bottom-width: 1px;"><b>(.*?)</b></div><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td><b>\1</b></td></tr><tr><td>\2</td></tr></table>\n', s, flags=re.DOTALL)
+        # Handle {panel}
+        s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
+        return s
