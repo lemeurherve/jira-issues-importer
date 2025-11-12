@@ -160,13 +160,15 @@ class Project:
 
         # metadata: environment
         try:
-            environment_txt = '<ul><li><i>environment</i>: <code>' + item.environment + '</code></li></ul>'
-            lines = str(item.environment).splitlines()
-            # Remove empty lines
-            lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
-            if len(lines) > 1:
-                environment_txt = '<details><summary><i>environment</i></summary>\n\n```\n' + '\n'.join(lines) + '\n```\n</details>'
-            body = body + '\n' + environment_txt
+            environment_value = item.environment.text.strip()
+            if environment_value:
+                environment_txt = '<ul><li><i>environment</i>: <code>' + environment_value + '</code></li></ul>'
+                lines = environment_value.splitlines()
+                # Remove empty lines
+                lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
+                if len(lines) > 1:
+                    environment_txt = '<details><summary><i>environment</i></summary>\n\n```\n' + '\n'.join(lines) + '\n```\n</details>'
+                body = body + '\n' + environment_txt
         except AttributeError:
             pass
 
