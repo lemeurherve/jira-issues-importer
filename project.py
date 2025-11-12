@@ -316,9 +316,12 @@ class Project:
     def _add_comments(self, item):
         try:
             for comment in item.comments.comment:
+                author = comment.get('author')
+                comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
+                comment_body = '<sup><i>' + author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
-                     "body": '<i><a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + comment.get('author') + '">' + comment.get('author') + '</a>:</i>\n' + self._clean_html(comment.text)
+                     "body": comment_body
                      })
         except AttributeError:
             pass
