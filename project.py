@@ -333,8 +333,7 @@ class Project:
                 comment_body = comment_body + '\n\n<!-- ### Imported Jira references for easier searching -->'
                 comment_body = comment_body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
                 comment_body = comment_body + '\n<!-- [jira_comment_id=' + comment.get('id') + '] -->'
-                comment_body = comment_body + '\n<!-- [author=' + author + '] -->'
-                comment_body = comment_body + '\n<!-- [comment_author=' + author + '] -->'
+                comment_body = comment_body + '\n<!-- [comment_author=' + comment_author + '] -->'
 
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
