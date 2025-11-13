@@ -120,7 +120,7 @@ class Project:
         reporter_username = self._proper_jirauser_username(item.reporter.username)
         issue_url = item.link.text
         issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
-        profile_url = self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + reporter_username
+        profile_url = self._profile_url(reporter_username)
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + reporter_fullname + '" href="' + profile_url + '">' + reporter_username + '</a>, imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
         body = body + '\n<i><ul>'
 
@@ -128,7 +128,7 @@ class Project:
         if item.assignee != 'Unassigned':
             assignee_fullname = item.assignee.text
             assignee_username = self._proper_jirauser_username(item.assignee.username)
-            assignee_profile_url = self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + assignee_username
+            assignee_profile_url = self._profile_url(assignee_username)
             body = body + '\n<li><b>assignee</b>: <a title="' + assignee_fullname + '" href="' + assignee_profile_url + '">' + assignee_username + '</a>'
 
         # included again as text to make searching by reporter easier
@@ -381,3 +381,8 @@ class Project:
                     if parts[0] == username:
                         return parts[1]
         return username
+
+    # In case JIRAUSER* proper usernames are not found
+    def _profile_url(self, username):
+        query_param = 'id' if username.startswith('JIRAUSER') else 'name'
+        return self.jiraBaseUrl + '/secure/ViewProfile.jspa?' + query_param + '=' + username
