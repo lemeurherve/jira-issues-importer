@@ -100,9 +100,6 @@ class Project:
             except AttributeError:
                 pass
 
-        # TODO: ensure item.assignee/reporter.get('username') to avoid "JENKINSUSER12345"
-        # TODO: fixit in gh issues
-
         # retrieve jira components and labels as github labels (add 'imported-jira-issue' label by default)
         labels = ['imported-jira-issue']
         for component in item.component:
@@ -119,14 +116,23 @@ class Project:
         body = self._clean_html(item.description.text)
 
         # metadata: original author & link
-        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
+        reporter_fullname = item.reporter.text
+        reporter_username = self._proper_jirauser_username(item.reporter.get('username'))
+        reporter = self._user_profilelink_or_name(reporter_username)
+        issue_url = item.link.text
+        issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
+        body = body + '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
         body = body + '\n<i><ul>'
 
         # metadata: assignee
         if item.assignee != 'Unassigned':
-            body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
-        # include to make searching by reporter easier
-        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
+            assignee_fullname = item.assignee.text
+            assignee_username = self._proper_jirauser_username(item.assignee.get('username'))
+            assignee = self._user_profilelink_or_name(assignee_username)
+            body = body + '\n<li><b>assignee</b>: ' + assignee
+
+        # included again as text to make searching by reporter easier
+        body = body + '\n<li><b>reported by</b>: ' + reporter_username
 
         # metadata: status
         try:
@@ -304,9 +310,9 @@ class Project:
     def _add_comments(self, item):
         try:
             for comment in item.comments.comment:
-                author = comment.get('author')
+                comment_author = self._proper_jirauser_username(comment.get('author'))
                 comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
-                comment_body = '<sup><i>' + author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
+                comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
                      "body": comment_body
@@ -366,3 +372,24 @@ class Project:
         # Handle {panel}
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
         return s
+
+    # Use lines from mappings/jira_users_fixed.txt to map JIRAUSER* to proper usernames
+    # Ex of line: JIRAUSER134221:hlmeur
+    def _proper_jirauser_username(self, name):
+        if name.startswith('JIRAUSER'):
+            try:
+                with open('mappings/jira_users_fixed.txt', 'r') as f:
+                    for line in f:
+                        parts = line.strip().split(':')
+                        if parts[0] == name:
+                            return parts[1]
+            except FileNotFoundError:
+                pass
+        return name
+
+    # In case JIRAUSER* proper usernames are not found
+    def _user_profilelink_or_name(self, name):
+        # We can't query profile for JIRAUSER* accounts
+        if name.startswith('JIRAUSER'):
+            return name
+        return '<a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + name + '">' + name + '</a>'
