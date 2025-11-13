@@ -6,7 +6,7 @@ from datetime import datetime
 import re
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, proper_label_str
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, convert_label, proper_label_str
 
 
 class Project:
@@ -20,6 +20,9 @@ class Project:
 
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
+        self.jira_fixed_usernames = fetch_jira_fixed_usernames()
+
+        self.version = '1.0.0'
 
     def get_milestones(self):
         return self._project['Milestones']
@@ -100,9 +103,6 @@ class Project:
             except AttributeError:
                 pass
 
-        # TODO: ensure item.assignee/reporter.get('username') to avoid "JENKINSUSER12345"
-        # TODO: fixit in gh issues
-
         # retrieve jira components and labels as github labels (add 'imported-jira-issue' label by default)
         labels = ['imported-jira-issue']
         for component in item.component:
@@ -120,14 +120,20 @@ class Project:
 
         ## imported issue details block
         # metadata: original author & link
-        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
+        reporter_fullname = item.reporter.text
+        reporter_username = self._proper_jirauser_username(item.reporter.get('username'))
+        reporter = self._user_profilelink_or_name(reporter_username)
+        issue_url = item.link.text
+        issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
+        body = body + '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
         body = body + '\n<i><ul>'
 
         # metadata: assignee
         if item.assignee != 'Unassigned':
-            body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
-        # include to make searching by reporter easier
-        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
+            assignee_fullname = item.assignee.text
+            assignee_username = self._proper_jirauser_username(item.assignee.get('username'))
+            assignee = self._user_profilelink_or_name(assignee_username)
+            body = body + '\n<li><b>assignee</b>: ' + assignee
 
         # metadata: status
         try:
@@ -201,6 +207,18 @@ class Project:
                 body = body + '\n<details><summary><i>' + summary + '</i></summary>\n' + ''.join(attachments) + '\n</details>'
         except AttributeError:
             pass
+
+        # References for better searching
+        body = body + '\n\n<!-- ### Imported Jira references for easier searching -->'
+        body = body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
+        # Putting both username and full name for reporter and assignee in case they differ
+        body = body + '\n<!-- [reporter=' + item.reporter.get('username') + '] -->'
+        body = body + '\n<!-- [assignee=' + item.assignee.get('username') + '] -->'
+        # Adding the reporter as "author" too in those references
+        body = body + '\n<!-- [author=' + item.reporter.get('username') + '] -->'
+
+        # Add version of the importer for future references
+        body = body + '\n<!-- [importer_version=' + self.version + '] -->'
 
         unique_labels = list(set(labels))
 
@@ -309,9 +327,16 @@ class Project:
     def _add_comments(self, item):
         try:
             for comment in item.comments.comment:
-                author = comment.get('author')
+                comment_author = self._proper_jirauser_username(comment.get('author'))
                 comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
-                comment_body = '<sup><i>' + author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
+                comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
+
+                # References for better searching
+                comment_body = comment_body + '\n\n<!-- ### Imported Jira references for easier searching -->'
+                comment_body = comment_body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
+                comment_body = comment_body + '\n<!-- [jira_comment_id=' + comment.get('id') + '] -->'
+                comment_body = comment_body + '\n<!-- [comment_author=' + comment_author + '] -->'
+
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
                      "body": comment_body
@@ -371,3 +396,15 @@ class Project:
         # Handle {panel}
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
         return s
+
+    def _proper_jirauser_username(self, name):
+        if name.startswith('JIRAUSER') and name in self.jira_fixed_usernames:
+            return self.jira_fixed_usernames[name]
+        return name
+
+    # In case JIRAUSER* proper usernames are not found
+    def _user_profilelink_or_name(self, name):
+        # We can't query profile for JIRAUSER* accounts
+        if name.startswith('JIRAUSER'):
+            return name
+        return '<a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + name + '">' + name + '</a>'
