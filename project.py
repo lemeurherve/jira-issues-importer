@@ -100,6 +100,7 @@ class Project:
                 pass
 
         # TODO: ensure item.assignee/reporter.get('username') to avoid "JENKINSUSER12345"
+        # If username starts with JIRAUSER, find proper username from jira_users_fixed.txt (which contains lines like JIRAUSER134221:hlemeur)
         # TODO: fixit in gh issues
 
         # retrieve jira components and labels as github labels (add 'imported-jira-issue' label by default)
