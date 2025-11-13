@@ -373,12 +373,12 @@ class Project:
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
         return s
 
-    # Use lines from jira_users_fixed.txt to map JIRAUSER* to proper usernames
+    # Use lines from mappings/jira_users_fixed.txt to map JIRAUSER* to proper usernames
     # Ex of line: JIRAUSER134221:hlmeur
     def _proper_jirauser_username(self, name):
         if name.startswith('JIRAUSER'):
             try:
-                with open('jira_users_fixed.txt', 'r') as f:
+                with open('mappings/jira_users_fixed.txt', 'r') as f:
                     for line in f:
                         parts = line.strip().split(':')
                         if parts[0] == name:
