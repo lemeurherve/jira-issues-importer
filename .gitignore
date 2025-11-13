@@ -100,4 +100,4 @@ issue_jira_github_mapping.json
 issue_comment_on*
 jira-comments.txt
 # Store proper usernames for JIRAUSER* accounts
-mappings/jira_users_fixed.txt
+jira_fixed_usernames.txt

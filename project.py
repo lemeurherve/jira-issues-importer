@@ -6,7 +6,7 @@ from datetime import datetime
 import re
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, proper_label_str
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, convert_label, proper_label_str
 
 
 class Project:
@@ -20,6 +20,7 @@ class Project:
 
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
+        self.jira_fixed_usernames = fetch_jira_fixed_usernames()
 
     def get_milestones(self):
         return self._project['Milestones']
@@ -373,18 +374,9 @@ class Project:
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
         return s
 
-    # Use lines from mappings/jira_users_fixed.txt to map JIRAUSER* to proper usernames
-    # Ex of line: JIRAUSER134221:hlmeur
     def _proper_jirauser_username(self, name):
-        if name.startswith('JIRAUSER'):
-            try:
-                with open('mappings/jira_users_fixed.txt', 'r') as f:
-                    for line in f:
-                        parts = line.strip().split(':')
-                        if parts[0] == name:
-                            return parts[1]
-            except FileNotFoundError:
-                pass
+        if name.startswith('JIRAUSER') and name in self.jira_fixed_usernames:
+            return self.jira_fixed_usernames[name]
         return name
 
     # In case JIRAUSER* proper usernames are not found

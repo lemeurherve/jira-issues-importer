@@ -4,15 +4,21 @@ import glob
 
 
 def fetch_labels_mapping():
-    with open("labels_mapping.txt") as file:
+    with open('labels_mapping.txt') as file:
         entry = [line.split("=") for line in file.readlines()]
     return {key.strip(): value.strip() for key, value in entry}
 
 
 def fetch_allowed_labels():
-    with open("allowed_labels.txt") as file:
+    with open('allowed_labels.txt') as file:
         return [line.strip('\n') for line in file.readlines()]
 
+# Use lines from jira_fixed_usernames.txt to map JIRAUSER* to proper usernames
+# Ex of line: JIRAUSER134221:hlmeur
+def fetch_jira_fixed_usernames():
+    with open('jira_fixed_usernames.txt') as file:
+        entry = [line.split(":") for line in file.readlines()]
+    return {key.strip(): value.strip() for key, value in entry}
 
 def _map_label(label, labels_mapping):
     if label in labels_mapping:
