@@ -129,6 +129,7 @@ class Project:
         body = body + '\n<i><ul>'
 
         # metadata: assignee
+        assignee_username = ''
         if item.assignee != 'Unassigned':
             assignee_fullname = item.assignee.text
             assignee_username = self._proper_jirauser_username(item.assignee.get('username'))
@@ -214,7 +215,8 @@ class Project:
         body = body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
         # Putting both username and full name for reporter and assignee in case they differ
         body = body + '\n<!-- [reporter=' + reporter_username + '] -->'
-        body = body + '\n<!-- [assignee=' + assignee_username + '] -->'
+        if assignee_username:
+            body = body + '\n<!-- [assignee=' + assignee_username + '] -->'
         # Adding the reporter as "author" too in those references
         body = body + '\n<!-- [author=' + reporter_username + '] -->'
 
