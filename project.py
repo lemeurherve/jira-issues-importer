@@ -331,7 +331,7 @@ class Project:
                 comment_author = self._proper_jirauser_username(comment.get('author'))
                 comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
                 comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
-                if comment.text.text is not None:
+                if comment.text is not None:
                     comment_body = comment_body + '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '\n</pre>\n</details>'
 
                 # References for better searching
