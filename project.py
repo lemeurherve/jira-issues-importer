@@ -118,18 +118,18 @@ class Project:
         # metadata: original author & link
         reporter_fullname = item.reporter.text
         reporter_username = self._proper_jirauser_username(item.reporter.username)
+        reporter = self._user_profilelink_or_name(reporter_username)
         issue_url = item.link.text
         issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
-        profile_url = self._profile_url(reporter_username)
-        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + reporter_fullname + '" href="' + profile_url + '">' + reporter_username + '</a>, imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
+        body = body + '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
         body = body + '\n<i><ul>'
 
         # metadata: assignee
         if item.assignee != 'Unassigned':
             assignee_fullname = item.assignee.text
             assignee_username = self._proper_jirauser_username(item.assignee.username)
-            assignee_profile_url = self._profile_url(assignee_username)
-            body = body + '\n<li><b>assignee</b>: <a title="' + assignee_fullname + '" href="' + assignee_profile_url + '">' + assignee_username + '</a>'
+            assignee = self._user_profilelink_or_name(assignee_username)
+            body = body + '\n<li><b>assignee</b>: ' + assignee
 
         # included again as text to make searching by reporter easier
         body = body + '\n<li><b>reported by</b>: ' + reporter_username
@@ -373,16 +373,23 @@ class Project:
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
         return s
 
-    def _proper_jirauser_username(self, username):
-        if username.startswith('JIRAUSER'):
-            with open('jira_users_fixed.txt', 'r') as f:
-                for line in f:
-                    parts = line.strip().split(':')
-                    if parts[0] == username:
-                        return parts[1]
-        return username
+    # Use lines from jira_users_fixed.txt to map JIRAUSER* to proper usernames
+    # Ex of line: JIRAUSER134221:hlmeur
+    def _proper_jirauser_username(self, name):
+        if name.startswith('JIRAUSER'):
+            try:
+                with open('jira_users_fixed.txt', 'r') as f:
+                    for line in f:
+                        parts = line.strip().split(':')
+                        if parts[0] == name:
+                            return parts[1]
+            except FileNotFoundError:
+                pass
+        return name
 
     # In case JIRAUSER* proper usernames are not found
-    def _profile_url(self, username):
-        query_param = 'id' if username.startswith('JIRAUSER') else 'name'
-        return self.jiraBaseUrl + '/secure/ViewProfile.jspa?' + query_param + '=' + username
+    def _user_profilelink_or_name(self, name):
+        # We can't query profile for JIRAUSER* accounts
+        if name.startswith('JIRAUSER'):
+            return name
+        return '<a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + name + '">' + name + '</a>'
