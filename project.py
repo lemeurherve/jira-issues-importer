@@ -208,9 +208,7 @@ class Project:
         body = body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
         # Putting both username and full name for reporter and assignee in case they differ
         body = body + '\n<!-- [reporter=' + item.reporter.get('username') + '] -->'
-        body = body + '\n<!-- [reporter=' + item.reporter.text + '] -->'
         body = body + '\n<!-- [assignee=' + item.assignee.get('username') + '] -->'
-        body = body + '\n<!-- [assignee=' + item.assignee.text + '] -->'
         # Adding the reporter as "author" too in those references
         body = body + '\n<!-- [author=' + item.reporter.get('username') + '] -->'
         body = body + '\n<!-- [author=' + item.reporter.text + '] -->'
