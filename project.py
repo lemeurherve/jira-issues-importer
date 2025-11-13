@@ -213,10 +213,10 @@ class Project:
         body = body + '\n\n<!-- ### Imported Jira references for easier searching -->'
         body = body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
         # Putting both username and full name for reporter and assignee in case they differ
-        body = body + '\n<!-- [reporter=' + item.reporter.get('username') + '] -->'
-        body = body + '\n<!-- [assignee=' + item.assignee.get('username') + '] -->'
+        body = body + '\n<!-- [reporter=' + reporter_username + '] -->'
+        body = body + '\n<!-- [assignee=' + assignee_username + '] -->'
         # Adding the reporter as "author" too in those references
-        body = body + '\n<!-- [author=' + item.reporter.get('username') + '] -->'
+        body = body + '\n<!-- [author=' + reporter_username + '] -->'
 
         # Add version of the importer for future references
         body = body + '\n<!-- [importer_version=' + self.version + '] -->'
