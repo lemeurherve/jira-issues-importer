@@ -21,6 +21,8 @@ class Project:
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
 
+        self.version = '1.0.0'
+
     def get_milestones(self):
         return self._project['Milestones']
 
@@ -206,6 +208,9 @@ class Project:
         # Adding the reporter as "author" too in those references
         body = body + '\n<!-- [author=' + item.reporter.get('username') + '] -->'
         body = body + '\n<!-- [author=' + item.reporter.text + '] -->'
+
+        # Add version of the importer for future references
+        body = body + '\n<!-- [importer_version=' + self.version + '] -->'
 
         unique_labels = list(set(labels))
 
