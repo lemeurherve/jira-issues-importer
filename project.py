@@ -211,7 +211,6 @@ class Project:
         body = body + '\n<!-- [assignee=' + item.assignee.get('username') + '] -->'
         # Adding the reporter as "author" too in those references
         body = body + '\n<!-- [author=' + item.reporter.get('username') + '] -->'
-        body = body + '\n<!-- [author=' + item.reporter.text + '] -->'
 
         # Add version of the importer for future references
         body = body + '\n<!-- [importer_version=' + self.version + '] -->'
