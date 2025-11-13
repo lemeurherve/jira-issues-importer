@@ -117,14 +117,25 @@ class Project:
 
         body = self._htmlentitydecode(item.description.text)
         # metadata: original author & link
-        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
+        reporter_fullname = item.reporter.text
+        reporter_username = item.reporter.username
+        query_param = 'id' if reporter_username.startswith('JIRAUSER') else 'name'
+        issue_url = item.link.text
+        issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
+        profile_url = self.jiraBaseUrl + '/secure/ViewProfile.jspa?' + query_param + '=' + reporter_username
+        body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + reporter_fullname + '" href="' + profile_url + '">' + reporter_username + '</a>, imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
         body = body + '\n<i><ul>'
 
         # metadata: assignee
         if item.assignee != 'Unassigned':
-            body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
-        # include to make searching by reporter easier
-        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
+            assignee_fullname = item.assignee.text
+            assignee_username = item.assignee.username
+            assignee_query_param = 'id' if assignee_username.startswith('JIRAUSER') else 'name'
+            assignee_profile_url = self.jiraBaseUrl + '/secure/ViewProfile.jspa?' + assignee_query_param + '=' + assignee_username
+            body = body + '\n<li><b>assignee</b>: <a title="' + assignee_fullname + '" href="' + assignee_profile_url + '">' + assignee_username + '</a>'
+
+        # included again as text to make searching by reporter easier
+        body = body + '\n<li><b>reported by</b>: ' + reporter_username
 
         # metadata: status
         try:
