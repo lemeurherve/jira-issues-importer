@@ -118,6 +118,7 @@ class Project:
 
         body = self._clean_html(item.description.text)
 
+        ## imported issue details block
         # metadata: original author & link
         body = body + '\n\n---\n<details><summary><i>Originally reported by <a title="' + str(item.reporter) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.reporter.get('username') + '">' + item.reporter.get('username') + '</a>, imported from: <a href="' + self.jiraBaseUrl + '/browse/' + item.key.text + '" target="_blank">' + item.title.text[item.title.text.index("]") + 2:len(item.title.text)] + '</a></i></summary>'
         body = body + '\n<i><ul>'
@@ -158,7 +159,11 @@ class Project:
         body = body + '\n<li><b>votes</b>: ' + str(item.votes)
         body = body + '\n<li><b>watchers</b>: ' + str(item.watches)
         body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
-        body = body + '\n</ul></i>\n</details>'
+        body = body + '\n</ul></i>'
+        body = body + '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '\n</pre>\n</details>'
+
+        ## End of issue details block
+        body = body + '\n</details>'
 
         # metadata: environment
         try:
