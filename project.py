@@ -125,8 +125,6 @@ class Project:
         # metadata: assignee
         if item.assignee != 'Unassigned':
             body = body + '\n<li><b>assignee</b>: <a title="' + str(item.assignee) + '" href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + item.assignee.get('username') + '">' + item.assignee.get('username') + '</a>'
-        # include to make searching by reporter easier
-        body = body + '\n<li><b>reported by</b>: ' + item.reporter.get('username')
 
         # metadata: status
         try:
@@ -196,6 +194,18 @@ class Project:
                 body = body + '\n<details><summary><i>' + summary + '</i></summary>\n' + ''.join(attachments) + '\n</details>'
         except AttributeError:
             pass
+
+        # References for better searching
+        body = body + '\n\n<!-- ### Imported Jira references for easier searching -->'
+        body = body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
+        # Putting both username and full name for reporter and assignee in case they differ
+        body = body + '\n<!-- [reporter=' + item.reporter.get('username') + '] -->'
+        body = body + '\n<!-- [reporter=' + item.reporter.text + '] -->'
+        body = body + '\n<!-- [assignee=' + item.assignee.get('username') + '] -->'
+        body = body + '\n<!-- [assignee=' + item.assignee.text + '] -->'
+        # Adding the reporter as "author" too in those references
+        body = body + '\n<!-- [author=' + item.reporter.get('username') + '] -->'
+        body = body + '\n<!-- [author=' + item.reporter.text + '] -->'
 
         unique_labels = list(set(labels))
 
@@ -307,6 +317,14 @@ class Project:
                 author = comment.get('author')
                 comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
                 comment_body = '<sup><i>' + author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
+
+                # References for better searching
+                comment_body = comment_body + '\n\n<!-- ### Imported Jira references for easier searching -->'
+                comment_body = comment_body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
+                comment_body = comment_body + '\n<!-- [jira_comment_id=' + comment.get('id') + '] -->'
+                comment_body = comment_body + '\n<!-- [author=' + author + '] -->'
+                comment_body = comment_body + '\n<!-- [comment_author=' + author + '] -->'
+
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
                      "body": comment_body
