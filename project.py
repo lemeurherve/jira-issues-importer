@@ -166,7 +166,8 @@ class Project:
         body = body + '\n<li><b>watchers</b>: ' + str(item.watches)
         body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
         body = body + '\n</ul></i>'
-        body = body + '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '\n</pre>\n</details>'
+        if item.description.text is not None:
+            body = body + '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '\n</pre>\n</details>'
 
         ## End of issue details block
         body = body + '\n</details>'
