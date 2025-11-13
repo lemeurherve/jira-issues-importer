@@ -118,6 +118,7 @@ class Project:
 
         body = self._clean_html(item.description.text)
 
+        ## imported issue details block
         # metadata: original author & link
         reporter_fullname = item.reporter.text
         reporter_username = self._proper_jirauser_username(item.reporter.get('username'))
@@ -164,7 +165,12 @@ class Project:
         body = body + '\n<li><b>votes</b>: ' + str(item.votes)
         body = body + '\n<li><b>watchers</b>: ' + str(item.watches)
         body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
-        body = body + '\n</ul></i>\n</details>'
+        body = body + '\n</ul></i>'
+        if item.description.text is not None:
+            body = body + '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'
+
+        ## End of issue details block
+        body = body + '\n</details>'
 
         # metadata: environment
         try:
@@ -325,6 +331,8 @@ class Project:
                 comment_author = self._proper_jirauser_username(comment.get('author'))
                 comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
                 comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
+                if comment.text is not None:
+                    comment_body = comment_body + '\n<hr><details><summary>Raw content of original comment</summary>\n\n<pre>\n' + comment.text.replace('<br/>', '') + '</pre>\n</details>'
 
                 # References for better searching
                 comment_body = comment_body + '\n\n<!-- ### Imported Jira references for easier searching -->'
