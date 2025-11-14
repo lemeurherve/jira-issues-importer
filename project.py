@@ -353,12 +353,16 @@ class Project:
                 else:
                     comment_raw = ''
                     comment_raw_details = ''
-                comment_body = (
-                    f'\n<details><summary><i>{comment_author}\'s <a href="{comment_link}">comment</a>:</i></summary>\n'
-                    f'\n{comment_raw_details}\n'
-                    f'\n</details>'
-                    f'\n{comment_text}'
-                )
+
+                if len(comment_raw_details) > 65000:
+                    comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + comment_text
+                else:
+                    comment_body = (
+                        f'\n<details><summary><i>{comment_author}\'s <a href="{comment_link}">comment</a>:</i></summary>\n'
+                        f'\n{comment_raw_details}\n'
+                        f'\n</details>'
+                        f'\n{comment_text}'
+                    )
 
                 # References for better searching
                 comment_body += (
