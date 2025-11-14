@@ -113,14 +113,14 @@ class Project:
         labels = ['imported-jira-issue']
         for component in item.component:
             if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
-                labels.append('component:' + proper_label_str(component.text))
+                labels.append('component:' + proper_label_str(component.text[:40]))
 
         labels.append(self._jira_type_mapping(item.type.text.lower()))
 
         for label in item.labels.findall('label'):
             converted_label = convert_label(proper_label_str(label.text), self.labels_mapping, self.approved_labels)
             if converted_label is not None:
-                labels.append(converted_label)
+                labels.append(converted_label[:50])
 
         body = self._clean_html(item.description.text)
 
