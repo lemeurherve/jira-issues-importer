@@ -26,7 +26,7 @@ class Project:
             self.avatar_folder_base = os.getenv('JIRA_MIGRATION_HOSTED_AVATAR_FOLDER_LINK')
         else:
             # Example for avatars hosted in a folder on GitHub
-            self.avatar_folder_base = 'https://raw.githubusercontent.com/lemeurherve-org/issues-from-jira/refs/heads/main/avatars'
+            self.avatar_folder_base = 'https://raw.githubusercontent.com/jenkinsci/artifacts-from-jira-issues/refs/heads/main/avatars'
 
         self.version = '1.0.0'
 
