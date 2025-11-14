@@ -14,11 +14,16 @@ def fetch_allowed_labels():
         return [line.strip('\n') for line in file.readlines()]
 
 # Use lines from jira_fixed_usernames.txt to map JIRAUSER* to proper usernames
-# Ex of line: JIRAUSER134221:hlmeur
+# Ex: https://github.com/lemeurherve-org/issues-from-jira/blob/342d2128d36da4a6ad59784ef8b22a040b9fac79/mappings/jira_fixed_usernames.txt
 def fetch_jira_fixed_usernames():
     with open('jira_fixed_usernames.txt') as file:
         entry = [line.split(":") for line in file.readlines()]
     return {key.strip(): value.strip() for key, value in entry}
+
+# Ex: https://github.com/lemeurherve-org/issues-from-jira/blob/342d2128d36da4a6ad59784ef8b22a040b9fac79/mappings/jira_user_avatars.txt
+def fetch_jira_user_avatars():
+    with open('jira_user_avatars.txt') as file:
+        return [line.strip('\n') for line in file.readlines()]
 
 def _map_label(label, labels_mapping):
     if label in labels_mapping:
