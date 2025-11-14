@@ -6,7 +6,7 @@ from datetime import datetime
 import re
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, convert_label, proper_label_str
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
 
 
 class Project:
@@ -21,6 +21,12 @@ class Project:
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
         self.jira_fixed_usernames = fetch_jira_fixed_usernames()
+        self.jira_user_avatars = fetch_jira_user_avatars()
+        if os.getenv('JIRA_MIGRATION_HOSTED_AVATAR_FOLDER_LINK'):
+            self.avatar_folder_base = os.getenv('JIRA_MIGRATION_HOSTED_AVATAR_FOLDER_LINK')
+        else:
+            # Example for avatars hosted in a folder on GitHub
+            self.avatar_folder_base = 'https://raw.githubusercontent.com/jenkinsci/artifacts-from-jira-issues/refs/heads/main/avatars'
 
         self.version = '1.0.0'
 
@@ -122,7 +128,7 @@ class Project:
         # metadata: original author & link
         reporter_fullname = item.reporter.text
         reporter_username = self._proper_jirauser_username(item.reporter.get('username'))
-        reporter = self._user_profilelink_or_name(reporter_username)
+        reporter = self._username_and_avatar(reporter_username)
         issue_url = item.link.text
         issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
         body = body + '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
@@ -132,7 +138,7 @@ class Project:
         if item.assignee != 'Unassigned':
             assignee_fullname = item.assignee.text
             assignee_username = self._proper_jirauser_username(item.assignee.get('username'))
-            assignee = self._user_profilelink_or_name(assignee_username)
+            assignee = self._username_and_avatar(assignee_username)
             body = body + '\n<li><b>assignee</b>: ' + assignee
         else:
             assignee_username = ''
@@ -332,7 +338,7 @@ class Project:
         try:
             for comment in item.comments.comment:
                 comment_id = comment.get('id')
-                comment_author = self._proper_jirauser_username(comment.get('author'))
+                comment_author = self._username_and_avatar(comment.get('author'), 'for_comment')
                 comment_link = item.link.text + '?focusedId=' + comment_id + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment_id
                 if comment.text is not None:
                     comment_text = self._clean_html(comment.text)
@@ -432,8 +438,16 @@ class Project:
         return name
 
     # In case JIRAUSER* proper usernames are not found
-    def _user_profilelink_or_name(self, name):
-        # We can't query profile for JIRAUSER* accounts
-        if name.startswith('JIRAUSER'):
-            return name
-        return '<a href="' + self.jiraBaseUrl + '/secure/ViewProfile.jspa?name=' + name + '">' + name + '</a>'
+    def _username_and_avatar(self, name, for_comment = ''):
+        username = self._proper_jirauser_username(name)
+        avatar_filename = username + '.png'
+        if avatar_filename in self.jira_user_avatars:
+            avatar = f'<img align="left" width="20" src="{self.avatar_folder_base}/{avatar_filename}" title="{username}\'s avatar" /> '
+        else:
+            avatar = ''
+        # No profile page for JIRAUSER* accounts
+        if username.startswith('JIRAUSER') or for_comment:
+            profile = username
+        else:
+            profile = f'<a href="{self.jiraBaseUrl}/secure/ViewProfile.jspa?name={name}">{username}</a>'
+        return f'{avatar}{profile}'
