@@ -129,12 +129,13 @@ class Project:
         body = body + '\n<i><ul>'
 
         # metadata: assignee
-        assignee_username = ''
         if item.assignee != 'Unassigned':
             assignee_fullname = item.assignee.text
             assignee_username = self._proper_jirauser_username(item.assignee.get('username'))
             assignee = self._user_profilelink_or_name(assignee_username)
             body = body + '\n<li><b>assignee</b>: ' + assignee
+        else:
+            assignee_username = ''
 
         # metadata: status
         try:
@@ -330,17 +331,36 @@ class Project:
     def _add_comments(self, item):
         try:
             for comment in item.comments.comment:
+                comment_id = comment.get('id')
                 comment_author = self._proper_jirauser_username(comment.get('author'))
-                comment_link = item.link.text + '?focusedId=' + comment.get('id') + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment.get('id')
-                comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + self._clean_html(comment.text)
+                comment_link = item.link.text + '?focusedId=' + comment_id + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment_id
                 if comment.text is not None:
-                    comment_body = comment_body + '\n<hr><details><summary>Raw content of original comment</summary>\n\n<pre>\n' + comment.text.replace('<br/>', '') + '</pre>\n</details>'
+                    comment_text = self._clean_html(comment.text)
+                    comment_raw = comment.text.replace('<br/>', '')
+                    comment_raw_details = (
+                        f'\n<details><summary><sub><i>Raw content of original comment:</i></sub></summary>\n'
+                        f'\n<pre>'
+                        f'\n{comment_raw}'
+                        f'\n</pre>'
+                        f'\n</details>'
+                    )
+                else:
+                    comment_raw = ''
+                    comment_raw_details = ''
+                comment_body = (
+                    f'\n<details><summary><i>{comment_author}\'s <a href="{comment_link}">comment</a>:</i></summary>\n'
+                    f'\n{comment_raw_details}\n'
+                    f'\n</details>'
+                    f'\n{comment_text}'
+                )
 
                 # References for better searching
-                comment_body = comment_body + '\n\n<!-- ### Imported Jira references for easier searching -->'
-                comment_body = comment_body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
-                comment_body = comment_body + '\n<!-- [jira_comment_id=' + comment.get('id') + '] -->'
-                comment_body = comment_body + '\n<!-- [comment_author=' + comment_author + '] -->'
+                comment_body += (
+                    f'\n\n<!-- ### Imported Jira references for easier searching -->'
+                    f'\n<!-- [jira_issue_key={item.key.text}] -->'
+                    f'\n<!-- [jira_comment_id={comment_id}] -->'
+                    f'\n<!-- [comment_author={comment_author}] -->'
+                )
 
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
