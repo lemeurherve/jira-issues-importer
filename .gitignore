@@ -101,3 +101,4 @@ issue_comment_on*
 jira-comments.txt
 # Store proper usernames for JIRAUSER* accounts
 jira_fixed_usernames.txt
+jira_user_avatars.txt
