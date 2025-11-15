@@ -41,8 +41,8 @@ while IFS= read -r ISSUE_CHECKING; do
       # see https://github.com/cli/cli/issues/10298
       gh sub-issue add -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" "${ISSUE_CHECKING}" || true
       # no cli support https://github.com/cli/cli/issues/9696
-      gh api -X PATCH repos/$OWNER/$REPO/issues/$EPIC_ISSUE_NUMBER --field type=Epic > /dev/null
-      gh issue edit --remove-label epic -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}"
+      gh api -X PATCH repos/$OWNER/$REPO/issues/$EPIC_ISSUE_NUMBER --field type=Epic > /dev/null || true
+      gh issue edit --remove-label epic -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" || true
 
       gh api \
         --method DELETE \
