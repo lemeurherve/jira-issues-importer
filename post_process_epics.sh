@@ -12,7 +12,7 @@ START_FROM=${3:-0}
 # jenkins core has around 600
 SEARCH_LIMIT=1000
 
-ALL_ISSUES_WITH_EPICS=$(gh search issues --owner $OWNER --repo $REPO --limit $SEARCH_LIMIT --match comments --json number,labels -- 'Epic:')
+ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "$OWNER/$REPO" --limit $SEARCH_LIMIT --match comments --json title,number,labels,url -- 'Epic:')
 ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES_WITH_EPICS}"| jq '.[].number' | sort -g | uniq)
 
 while IFS= read -r ISSUE_CHECKING; do
@@ -29,7 +29,7 @@ while IFS= read -r ISSUE_CHECKING; do
     JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -r 's#^.*<a href="[^"]+">([^<]+)</a>.*$#\1#')
     echo "Found epic $JIRA_ISSUE_KEY"
 
-    EPIC_ISSUES_JSON=$(gh search issues --owner ${OWNER} --repo ${REPO} --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
+    EPIC_ISSUES_JSON=$(gh search issues --repo "$OWNER/$REPO" --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
     EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\"${OWNER}/${REPO}\"').number')
     # can be empty if epic is not in core component
     if [ -n "$EPIC_ISSUE_NUMBER"  ]
