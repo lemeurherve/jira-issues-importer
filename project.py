@@ -22,11 +22,12 @@ class Project:
         self.approved_labels = fetch_allowed_labels()
         self.jira_fixed_usernames = fetch_jira_fixed_usernames()
         self.jira_user_avatars = fetch_jira_user_avatars()
-        if os.getenv('JIRA_MIGRATION_HOSTED_AVATAR_FOLDER_LINK'):
-            self.avatar_folder_base = os.getenv('JIRA_MIGRATION_HOSTED_AVATAR_FOLDER_LINK')
+        # Hosted artifacts like avatars or attachments
+        if os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_BASE'):
+            self.hosted_artifact_base_link = os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_BASE')
         else:
-            # Example for avatars hosted in a folder on GitHub
-            self.avatar_folder_base = 'https://raw.githubusercontent.com/jenkinsci/artifacts-from-jira-issues/refs/heads/main/avatars'
+            # Example for artifacts hosted in a folder on GitHub
+            self.hosted_artifact_base = 'https://raw.githubusercontent.com/jenkinsci/artifacts-from-jira-issues/refs/heads/main'
 
         self.version = '1.0.0'
 
@@ -440,9 +441,9 @@ class Project:
     # In case JIRAUSER* proper usernames are not found
     def _username_and_avatar(self, name, for_comment = ''):
         username = self._proper_jirauser_username(name)
-        avatar_filename = username + '.png'
-        if avatar_filename in self.jira_user_avatars:
-            avatar = f'<img align="left" width="20" src="{self.avatar_folder_base}/{avatar_filename}" title="{username}\'s avatar" /> '
+        if username in self.jira_user_avatars:
+            avatar_path = self.hosted_artifact_base + '/' + self.jira_user_avatars[username]
+            avatar = f'<img align="left" width="20" src="{avatar_path}" title="{username}\'s avatar" /> '
         else:
             avatar = ''
         # No profile page for JIRAUSER* accounts
