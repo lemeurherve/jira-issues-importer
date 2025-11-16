@@ -20,10 +20,11 @@ def fetch_jira_fixed_usernames():
         entry = [line.split(":") for line in file.readlines()]
     return {key.strip(): value.strip() for key, value in entry}
 
-# Ex: https://github.com/jenkinsci/artifacts-from-jira-issues/blob/main/mappings/jira_user_avatars.txt
+# Ex: https://github.com/jenkinsci/artifacts-from-jira-issues/blob/main/mappings/jira_username_avatar_mapping.txt
 def fetch_jira_user_avatars():
-    with open('jira_user_avatars.txt') as file:
-        return [line.strip('\n') for line in file.readlines()]
+    with open('jira_username_avatar_mapping.txt') as file:
+        entry = [line.split(":") for line in file.readlines()]
+    return {key.strip(): value.strip() for key, value in entry}
 
 def _map_label(label, labels_mapping):
     if label in labels_mapping:
