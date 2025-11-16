@@ -4,6 +4,7 @@ from html.entities import name2codepoint
 from dateutil.parser import parse
 from datetime import datetime
 import re
+import requests
 from urllib.parse import quote
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
@@ -20,14 +21,31 @@ class Project:
 
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
-        self.jira_fixed_usernames = fetch_jira_fixed_usernames()
-        self.jira_user_avatars = fetch_jira_user_avatars()
-        # Hosted artifacts like avatars or attachments
-        if os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_BASE'):
-            self.hosted_artifact_base_link = os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_BASE')
-        else:
-            # Example for artifacts hosted in a folder on GitHub
-            self.hosted_artifact_base = 'https://raw.githubusercontent.com/jenkinsci/artifacts-from-jira-issues/refs/heads/main'
+
+        self.jira_fixed_username_file = 'jira_fixed_usernames.txt'
+        self.jira_username_avatar_mapping_file = 'jira_username_avatar_mapping.txt'
+        # "org/repo" hosting artifacts like avatars, attachments and username mappings
+        # If not set, will use local files, and won't add avatar in issues or comments
+        # Example of such repo: https://github.com/lemeurherve/artifacts-from-jira-issues-example
+        if os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
+            self.hosted_artifact_base = 'https://raw.githubusercontent.com/' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + '/refs/heads/main'
+
+            # Download mappings from hosted artifacts repo for further inspection post import
+            print('Downloading mappings from ' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + ' if they don\'t already exist')
+            if not os.path.exists(self.jira_fixed_username_file):
+                response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_fixed_username_file)
+                open(self.jira_fixed_username_file, 'w').write(response.text)
+                print(self.jira_fixed_username_file + ' downloaded')
+            if not os.path.exists(self.jira_username_avatar_mapping_file):
+                response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_username_avatar_mapping_file)
+                open(self.jira_username_avatar_mapping_file, 'w').write(response.text)
+                print(self.jira_username_avatar_mapping_file + ' downloaded')
+
+            # As avatars can only be displayed if they're hosted, load its mapping only in that case
+            self.jira_user_avatars = fetch_jira_user_avatars(self.jira_username_avatar_mapping_file)
+
+        # load proper usernames mapping from file (from local file, eventually downloaded above)
+        self.jira_fixed_usernames = fetch_jira_fixed_usernames(self.jira_fixed_username_file)
 
         self.version = '1.0.0'
 
@@ -374,6 +392,7 @@ class Project:
                 else:
                     comment_raw = ''
                     comment_raw_details = ''
+                    comment_text = ''
 
                 if len(comment_raw_details) > 65000:
                     comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + comment_text
@@ -461,11 +480,12 @@ class Project:
     # In case JIRAUSER* proper usernames are not found
     def _username_and_avatar(self, name, for_comment = ''):
         username = self._proper_jirauser_username(name)
-        if username in self.jira_user_avatars:
-            avatar_path = self.hosted_artifact_base + '/' + self.jira_user_avatars[username]
-            avatar = f'<img align="left" width="20" src="{avatar_path}" title="{username}\'s avatar" /> '
-        else:
-            avatar = ''
+        avatar = ''
+        # Retrieve avatars only if JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO is set
+        if self.hosted_artifact_base:
+            if username in self.jira_user_avatars:
+                avatar_path = self.hosted_artifact_base + '/' + self.jira_user_avatars[username]
+                avatar = f'<img align="left" width="20" src="{avatar_path}" title="{username}\'s avatar" /> '
         # No profile page for JIRAUSER* accounts
         if username.startswith('JIRAUSER') or for_comment:
             profile = username
