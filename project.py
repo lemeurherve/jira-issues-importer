@@ -150,54 +150,68 @@ class Project:
         reporter = self._username_and_avatar(reporter_username)
         issue_url = item.link.text
         issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
-        body = body + '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
-        body = body + '\n<i><ul>'
+        body += '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
+        body += '\n<i><ul>'
 
         # metadata: assignee
         if item.assignee != 'Unassigned':
             assignee_fullname = item.assignee.text
             assignee_username = self._proper_jirauser_username(item.assignee.get('username'))
             assignee = self._username_and_avatar(assignee_username)
-            body = body + '\n<li><b>assignee</b>: ' + assignee
+            body += '\n<li><b>assignee</b>: ' + assignee
         else:
             assignee_username = ''
 
         # metadata: status
         try:
-            body = body + '\n<li><b>status</b>: ' + item.status
+            body += '\n<li><b>status</b>: ' + item.status
         except AttributeError:
             pass
 
         # metadata: priority
         try:
             priority_txt = item.priority.text
-            body = body + '\n<li><b>priority</b>: ' + priority_txt
+            body += '\n<li><b>priority</b>: ' + priority_txt
             labels.append('priority:' + proper_label_str(priority_txt))
         except AttributeError:
             pass
 
+        # metadata: components
+        components_txt = ''
+        for component in item.component:
+            components_txt += ', ' + component.text if components_txt else component.text
+        if components_txt:
+            body += '\n<li><b>component(s)</b>: ' + components_txt
+
+        # metadata: labels
+        labels_txt = ''
+        for label in item.labels.findall('label'):
+            labels_txt += ', ' + label.text if labels_txt else label.text
+        if labels_txt:
+            body += '\n<li><b>label(s)</b>: ' + labels_txt
+
         # metadata: resolution
         try:
             resolution_txt = item.resolution.text
-            body = body + '\n<li><b>resolution</b>: ' + resolution_txt
+            body += '\n<li><b>resolution</b>: ' + resolution_txt
             labels.append('resolution:' + proper_label_str(resolution_txt))
         except AttributeError:
             pass
 
         # metadata: resolved
         try:
-            body = body + '\n<li><b>resolved</b>: ' + self._convert_to_iso(item.resolved.text)
+            body += '\n<li><b>resolved</b>: ' + self._convert_to_iso(item.resolved.text)
         except AttributeError:
             pass
-        body = body + '\n<li><b>votes</b>: ' + str(item.votes)
-        body = body + '\n<li><b>watchers</b>: ' + str(item.watches)
-        body = body + '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
-        body = body + '\n</ul></i>'
+        body += '\n<li><b>votes</b>: ' + str(item.votes)
+        body += '\n<li><b>watchers</b>: ' + str(item.watches)
+        body += '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
+        body += '\n</ul></i>'
         if item.description.text is not None:
-            body = body + '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'
+            body += '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'
 
         ## End of issue details block
-        body = body + '\n</details>'
+        body += '\n</details>'
 
         # metadata: environment
         try:
@@ -209,7 +223,7 @@ class Project:
                 lines = [line for line in lines if line.replace('<br/>', '').strip() != '']
                 if len(lines) > 1:
                     environment_txt = '<details><summary><i>environment</i></summary>\n\n```\n' + '\n'.join(lines) + '\n```\n</details>'
-                body = body + '\n' + environment_txt
+                body += '\n' + environment_txt
         except AttributeError:
             pass
 
@@ -232,22 +246,28 @@ class Project:
                 attachments.append('\n- ' + attachment_txt)
             if len(attachments) > 0:
                 summary = str(len(attachments)) + ' attachments' if len(attachments) > 1 else '1 attachment'
-                body = body + '\n<details><summary><i>' + summary + '</i></summary>\n' + ''.join(attachments) + '\n</details>'
+                body += '\n<details><summary><i>' + summary + '</i></summary>\n' + ''.join(attachments) + '\n</details>'
         except AttributeError:
             pass
 
         # References for better searching
-        body = body + '\n\n<!-- ### Imported Jira references for easier searching -->'
-        body = body + '\n<!-- [jira_issue_key=' + item.key.text + '] -->'
+        body += '\n\n<!-- ### Imported Jira references for easier searching -->'
+        body += f'\n<!-- [jira_issue_key={item.key.text}] -->'
         # Putting both username and full name for reporter and assignee in case they differ
-        body = body + '\n<!-- [reporter=' + reporter_username + '] -->'
+        body += f'\n<!-- [reporter={reporter_username}] -->'
         if assignee_username:
-            body = body + '\n<!-- [assignee=' + assignee_username + '] -->'
+            body += f'\n<!-- [assignee={assignee_username}] -->'
         # Adding the reporter as "author" too in those references
-        body = body + '\n<!-- [author=' + reporter_username + '] -->'
+        body += f'\n<!-- [author={reporter_username}] -->'
+        # components
+        for component in item.component:
+            body += f'\n<!-- [jira_component={component.text}] -->'
+        # labels
+        for label in item.labels.findall('label'):
+            body += f'\n<!-- [jira_label={label.text}] -->'
 
         # Add version of the importer for future references
-        body = body + '\n<!-- [importer_version=' + self.version + '] -->'
+        body += '\n<!-- [importer_version=' + self.version + '] -->'
 
         unique_labels = list(set(labels))
 
