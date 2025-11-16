@@ -470,6 +470,9 @@ class Project:
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelHeader" style="border-bottom-width: 1px;"><b>(.*?)</b></div><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td><b>\1</b></td></tr><tr><td>\2</td></tr></table>\n', s, flags=re.DOTALL)
         # Handle {panel}
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td>\1</td></tr></table>\n', s, flags=re.DOTALL)
+
+        # Escape @mentions to prevent unwanted mentions in GitHub
+        s = re.sub(r'@([A-Za-z0-9._-]+)', '@\u200B\\1', s)
         return s
 
     def _proper_jirauser_username(self, name):
