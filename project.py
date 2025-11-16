@@ -372,6 +372,7 @@ class Project:
                 else:
                     comment_raw = ''
                     comment_raw_details = ''
+                    comment_text = ''
 
                 if len(comment_raw_details) > 65000:
                     comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + comment_text
