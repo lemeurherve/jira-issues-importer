@@ -2,7 +2,6 @@ from lxml import objectify
 import os
 import glob
 
-
 def fetch_labels_mapping():
     with open('labels_mapping.txt') as file:
         entry = [line.split("=") for line in file.readlines()]
@@ -13,16 +12,15 @@ def fetch_allowed_labels():
     with open('allowed_labels.txt') as file:
         return [line.strip('\n') for line in file.readlines()]
 
-# Use lines from jira_fixed_usernames.txt to map JIRAUSER* to proper usernames
-# Ex: https://github.com/jenkinsci/artifacts-from-jira-issues/blob/main/mappings/jira_fixed_usernames.txt
-def fetch_jira_fixed_usernames():
-    with open('jira_fixed_usernames.txt') as file:
+# Ex of line: JIRAUSER134221:hlemeur
+def fetch_jira_fixed_usernames(filename):
+    with open(filename) as file:
         entry = [line.split(":") for line in file.readlines()]
     return {key.strip(): value.strip() for key, value in entry}
 
-# Ex: https://github.com/jenkinsci/artifacts-from-jira-issues/blob/main/mappings/jira_username_avatar_mapping.txt
-def fetch_jira_user_avatars():
-    with open('jira_username_avatar_mapping.txt') as file:
+# Ex of line: hlemeur:avatars/hlemeur.png
+def fetch_jira_user_avatars(filename):
+    with open(filename) as file:
         entry = [line.split(":") for line in file.readlines()]
     return {key.strip(): value.strip() for key, value in entry}
 
@@ -31,7 +29,6 @@ def _map_label(label, labels_mapping):
         return labels_mapping[label]
     else:
         return label
-
 
 def _is_label_approved(label, approved_labels):
     return label in approved_labels
