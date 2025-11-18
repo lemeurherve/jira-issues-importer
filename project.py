@@ -151,7 +151,7 @@ class Project:
         reporter = self._username_and_avatar(reporter_username)
         issue_url = item.link.text
         issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
-        body += '\n\n---\n<details><summary><i>Originally reported by ' + reporter + ', imported from: <a href="' + issue_url + '" target="_blank">' + issue_title_without_key + '</a></i></summary>'
+        body += f'\n\n---\n<details><summary><i>Originally reported by {reporter}, imported from: <a class="no-jira-link-rewrite" href="{issue_url}" target="_blank">{issue_title_without_key}</a></i></summary>'
         body += '\n<i><ul>'
 
         # metadata: assignee
@@ -379,7 +379,7 @@ class Project:
             for comment in item.comments.comment:
                 comment_id = comment.get('id')
                 comment_author = self._username_and_avatar(comment.get('author'), 'for_comment')
-                comment_link = item.link.text + '?focusedId=' + comment_id + '&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-' + comment_id
+                a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
                 if comment.text is not None:
                     comment_text = self._clean_html(comment.text)
                     comment_raw = comment.text.replace('<br/>', '')
@@ -396,10 +396,11 @@ class Project:
                     comment_text = ''
 
                 if len(comment_raw_details) > 65000:
-                    comment_body = '<sup><i>' + comment_author + '\'s <a href="' + comment_link + '">comment</a>:</i></sup>\n' + comment_text
+                    comment_body = f'<sup><i>{comment_author}\'s {a_comment_link}comment</a>:</i></sup>'
+                    comment_body += f'\n{comment_text}'
                 else:
                     comment_body = (
-                        f'\n<details><summary><i>{comment_author}\'s <a href="{comment_link}">comment</a>:</i></summary>\n'
+                        f'\n<details><summary><i>{comment_author}\'s {a_comment_link}comment</a>:</i></summary>\n'
                         f'\n{comment_raw_details}\n'
                         f'\n</details>'
                         f'\n{comment_text}'
