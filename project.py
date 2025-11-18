@@ -27,6 +27,7 @@ class Project:
         # "org/repo" hosting artifacts like avatars, attachments and username mappings
         # If not set, will use local files, and won't add avatar in issues or comments
         # Example of such repo: https://github.com/lemeurherve/artifacts-from-jira-issues-example
+        self.hosted_artifact_base = None
         if os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
             self.hosted_artifact_base = 'https://raw.githubusercontent.com/' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + '/refs/heads/main'
 
