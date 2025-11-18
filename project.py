@@ -8,7 +8,7 @@ import requests
 from urllib.parse import quote
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
-
+from version import __version__
 
 class Project:
 
@@ -48,7 +48,7 @@ class Project:
         # load proper usernames mapping from file (from local file, eventually downloaded above)
         self.jira_fixed_usernames = fetch_jira_fixed_usernames(self.jira_fixed_username_file)
 
-        self.version = '1.0.0'
+        self.version = __version__
 
     def get_milestones(self):
         return self._project['Milestones']
