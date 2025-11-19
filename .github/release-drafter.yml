@@ -1,2 +1,3 @@
 # Configuration for Release Drafter: https://github.com/toolmantim/release-drafter
+name-template: '$RESOLVED_VERSION'
 tag-template: '$RESOLVED_VERSION'
