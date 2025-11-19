@@ -256,7 +256,7 @@ class Importer:
 
         def _comment_body(jira_key, relationship_type):
             return (
-                f'<sub><i>[Original `{relationship_type}`:<a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i></sub>\n'
+                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
                 f'<!-- [jira_relationship_key={jira_key}] -->'
                 f'<!-- [jira_relationship_type={relationship_type}] -->'
             )
