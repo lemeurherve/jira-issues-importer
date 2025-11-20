@@ -26,7 +26,7 @@ while IFS= read -r ISSUE_CHECKING; do
 
   if [ -n "$COMMENT"  ]
   then
-    JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -r 's#^.*<a href="[^"]+">([^<]+)</a>.*$#\1#')
+    JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -r 's#^.*jira_relationship_key=([^\]]+).*$#\1#')
     echo "Found epic $JIRA_ISSUE_KEY"
 
     EPIC_ISSUES_JSON=$(gh search issues --repo "$OWNER/$REPO" --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
