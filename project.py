@@ -256,6 +256,17 @@ class Project:
         # References for better searching
         body += '\n\n<!-- ### Imported Jira references for easier searching -->'
         body += f'\n<!-- [jira_issue_key={item.key.text}] -->'
+        # TODO: map Jira issue types <> GitHub issue types
+        # add github_issue_type (for post-process)
+        # then don't add jira-type:<type> labels
+        issue_type = ' '.join(item.type.text.strip().split())
+        body += f'\n<!-- [jira_issue_type={issue_type}] -->'
+        # epic
+        if issue_type == 'Epic':
+            body += f'\n<!-- [jira_issue_is_epic_key={item.key.text}] -->'
+        epic_key = self._find_epic_link_key(item)
+        if epic_key:
+            body += f'\n<!-- [jira_relationships_epic_key={epic_key}] -->'
         # Putting both username and full name for reporter and assignee in case they differ
         body += f'\n<!-- [reporter={reporter_username}] -->'
         if assignee_username:
@@ -447,10 +458,15 @@ class Project:
         except KeyError:
             print('2. KeyError at ' + item.key.text)
 
+        self._project['Issues'][-1]['epic-link'] = self._find_epic_link_key(item)
+
+    def _find_epic_link_key(self, item):
         for customfield in item.customfields.findall('customfield'):
             if customfield.get('key') == 'com.pyxis.greenhopper.jira:gh-epic-link':
                 epic_key = customfield.customfieldvalues.customfieldvalue
                 self._project['Issues'][-1]['epic-link'] = epic_key
+                return epic_key
+        return None
 
     def _htmlentitydecode(self, s):
         if s is None:
