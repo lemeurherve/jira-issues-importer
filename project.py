@@ -398,11 +398,11 @@ class Project:
                     comment_text = ''
 
                 if len(comment_raw_details) > 65000:
-                    comment_body = f'<sup><i>{comment_author}\'s {a_comment_link}comment</a>:</i></sup>'
+                    comment_body = f'<sup><i>{a_comment_link}comment</a> from <b>{comment_author}</b>:</i></sup>'
                     comment_body += f'\n{comment_text}'
                 else:
                     comment_body = (
-                        f'\n<details><summary><i>{comment_author}\'s {a_comment_link}comment</a>:</i></summary>\n'
+                        f'\n<details><summary><i>{a_comment_link}comment</a> from <b>{comment_author}</b>:</i></summary>\n'
                         f'\n{comment_raw_details}\n'
                         f'\n</details>'
                         f'\n{comment_text}'
