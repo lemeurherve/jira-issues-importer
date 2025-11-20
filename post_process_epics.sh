@@ -12,7 +12,7 @@ START_FROM=${3:-0}
 # jenkins core has around 600
 SEARCH_LIMIT=1000
 
-ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "$OWNER/$REPO" --limit $SEARCH_LIMIT --match comments --json title,number,labels,url -- 'Epic:')
+ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "$OWNER/$REPO" --limit $SEARCH_LIMIT --match comments --json title,number,labels,url -- 'jira_relationship_type=epic')
 ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES_WITH_EPICS}"| jq '.[].number' | sort -g | uniq)
 
 while IFS= read -r ISSUE_CHECKING; do
@@ -20,7 +20,7 @@ while IFS= read -r ISSUE_CHECKING; do
     continue
   fi
   echo "Checking $ISSUE_CHECKING"
-  COMMENT_JSON=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[] | select(any(.body; contains("[Epic:")))')
+  COMMENT_JSON=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[] | select(any(.body; contains("jira_relationship_type=epic")))')
   COMMENT=$(echo "$COMMENT_JSON" | jq -r '.body')
   COMMENT_NUMBER=$(echo "$COMMENT_JSON" | jq -r '.url' | awk -F 'issuecomment-' '{print $2}')
 
