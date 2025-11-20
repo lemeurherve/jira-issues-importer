@@ -67,7 +67,7 @@ while IFS= read -r ISSUE_CHECKING; do
         "/repos/${github_repo}/issues/comments/${COMMENT_NUMBER}"
       sleep 1
     else
-      echo "${JIRA_ISSUE_KEY} not found in issues body"
+      echo "${JIRA_ISSUE_KEY} not found in imported issues"
     fi
   else
     echo "COMMENT empty"
