@@ -142,6 +142,8 @@ class Project:
             if converted_label is not None:
                 labels.append(converted_label[:50])
 
+        labels = list(filter(None, set(labels))) # Unique labels, filter out None
+
         body = self._clean_html(item.description.text)
 
         ## imported issue details block
@@ -270,7 +272,7 @@ class Project:
         # Add version of the importer for future references
         body += '\n<!-- [importer_version=' + self.version + '] -->'
 
-        unique_labels = list(set(labels))
+        # unique_labels = list(filter(None, set(labels)))  # Filter out None value
 
         self._project['Issues'].append({'title': item.title.text,
                                         'key': item.key.text,
@@ -279,7 +281,7 @@ class Project:
                                         'closed_at': closed_at,
                                         'updated_at': self._convert_to_iso(item.updated.text),
                                         'closed': closed,
-                                        'labels': unique_labels,
+                                        'labels': labels,
                                         'comments': [],
                                         'duplicates': [],
                                         'is-duplicated-by': [],
