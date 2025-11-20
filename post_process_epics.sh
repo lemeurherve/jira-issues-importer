@@ -21,7 +21,7 @@ fi
 # jenkins core has around 600
 SEARCH_LIMIT=1000
 
-ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "$OWNER/$REPO" --limit $SEARCH_LIMIT --match comments --json title,number,labels,url -- 'jira_relationship_type=epic')
+ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "${github_repo}" --limit $SEARCH_LIMIT --match body --json title,number,labels,url -- 'jira_relationships_epic_key=')
 ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES_WITH_EPICS}"| jq '.[].number' | sort -g | uniq)
 
 while IFS= read -r ISSUE_CHECKING; do
