@@ -9,6 +9,15 @@ OWNER=${1:-timja-org}
 REPO=${2:-jenkins-gh-issues-poc-11-04}
 START_FROM=${3:-0}
 
+github_repo="${OWNER}/${REPO}"
+github_issues_link="https://github.com/${OWNER}/${REPO}/issues"
+
+# See https://github.com/cli/cli/issues/10298
+if ! gh sub-issue --version >/dev/null 2>&1; then
+  echo "'sub-issue' gh extension not found. Execute 'gh extension install yahsan2/gh-sub-issue' first"
+  exit 1
+fi
+
 # jenkins core has around 600
 SEARCH_LIMIT=1000
 
