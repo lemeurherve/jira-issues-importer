@@ -33,11 +33,15 @@ class Project:
 
             # Download mappings from hosted artifacts repo for further inspection post import
             print('Downloading mappings from ' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + ' if they don\'t already exist')
-            if not os.path.exists(self.jira_fixed_username_file):
+            if os.path.exists(self.jira_fixed_username_file):
+                print(self.jira_fixed_username_file + ' already exits')
+            else:
                 response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_fixed_username_file)
                 open(self.jira_fixed_username_file, 'w').write(response.text)
                 print(self.jira_fixed_username_file + ' downloaded')
-            if not os.path.exists(self.jira_username_avatar_mapping_file):
+            if os.path.exists(self.jira_username_avatar_mapping_file):
+                print(self.jira_username_avatar_mapping_file + ' already exits')
+            else:
                 response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_username_avatar_mapping_file)
                 open(self.jira_username_avatar_mapping_file, 'w').write(response.text)
                 print(self.jira_username_avatar_mapping_file + ' downloaded')
