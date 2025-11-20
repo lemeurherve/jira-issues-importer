@@ -1,5 +1,25 @@
 # Configuration for Release Drafter: https://github.com/toolmantim/release-drafter
 name-template: '$RESOLVED_VERSION'
 tag-template: '$RESOLVED_VERSION'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'chore'
+      - 'dependencies'
+  default: patch
+
 template: |
   $CHANGES
