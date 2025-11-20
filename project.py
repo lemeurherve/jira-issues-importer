@@ -30,11 +30,13 @@ class Project:
         # If not set, will use local files, and won't add avatar in issues or comments
         # Example of such repo: https://github.com/lemeurherve/artifacts-from-jira-issues-example
         self.hosted_artifact_base = None
-        if os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
+        if not os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
+            print('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO is not set: no mapping files will be retrieved and no avatar will be rattached to issues or comments')
+        else:
             self.hosted_artifact_base = 'https://raw.githubusercontent.com/' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + '/refs/heads/main'
 
             # Download mappings from hosted artifacts repo for further inspection post import
-            print('Downloading mappings from ' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + ' if they don\'t already exist')
+            print('\nDownloading mappings from ' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + ' if they don\'t already exist')
             if os.path.exists(self.jira_fixed_username_file):
                 print(f'- {self.jira_fixed_username_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_fixed_username_file))})')
             else:
@@ -48,6 +50,7 @@ class Project:
                 response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_username_avatar_mapping_file)
                 open(self.jira_username_avatar_mapping_file, 'w').write(response.text)
                 print(f'- {self.jira_username_avatar_mapping_file} downloaded')
+            print()
 
             # As avatars can only be displayed if they're hosted, load its mapping only in that case
             self.jira_user_avatars = fetch_jira_user_avatars(self.jira_username_avatar_mapping_file)
