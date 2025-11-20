@@ -32,6 +32,7 @@ while IFS= read -r ISSUE_CHECKING; do
   fi
   echo "---"
   echo "Checking ${github_issues_link}/${ISSUE_CHECKING}"
+  # TODO: retrieve epic key from child issue body directly and get rid of the epic comment here and in project.py
   COMMENT_JSON=$(gh issue view -R "${github_repo}" "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[] | select(any(.body; contains("jira_relationship_type=epic")))')
   COMMENT=$(echo "$COMMENT_JSON" | jq -r '.body')
   COMMENT_NUMBER=$(echo "$COMMENT_JSON" | jq -r '.url' | awk -F 'issuecomment-' '{print $2}')
@@ -52,14 +53,18 @@ while IFS= read -r ISSUE_CHECKING; do
     then
       echo "Found issue for epic: ${github_issues_link}/${EPIC_ISSUE_NUMBER}"
 
-      BODY=$(gh issue view -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" --json body --jq '.body')
+      # add current issue as epic sub issue
       gh sub-issue add -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" "${ISSUE_CHECKING}" || true
-      set -x
-      # no cli support https://github.com/cli/cli/issues/9696
+      # issue type (no cli support https://github.com/cli/cli/issues/9696)
       gh api -X PATCH "repos/${github_repo}/issues/${EPIC_ISSUE_NUMBER}" --field type=Epic > /dev/null || true
-      gh issue edit --remove-label epic -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" || true
-      set +x
-
+      # delete epic label if any
+      if gh issue view -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" --json labels --jq '.labels[].name' | grep -q -w -e 'epic' -e 'jira-type:epic'; then
+        gh issue edit --remove-label 'epic' -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" || true
+        gh issue edit --remove-label 'jira-type:epic' -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" || true
+      else
+        echo 'No epic label found'
+      fi
+      # delete epic comment
       gh api \
         --method DELETE \
         -H "Accept: application/vnd.github+json" \
