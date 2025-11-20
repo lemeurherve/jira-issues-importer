@@ -5,6 +5,8 @@ from dateutil.parser import parse
 from datetime import datetime
 import re
 import requests
+import time
+
 from urllib.parse import quote
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
@@ -33,14 +35,19 @@ class Project:
 
             # Download mappings from hosted artifacts repo for further inspection post import
             print('Downloading mappings from ' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + ' if they don\'t already exist')
-            if not os.path.exists(self.jira_fixed_username_file):
+            if os.path.exists(self.jira_fixed_username_file):
+                print(f'- {self.jira_fixed_username_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_fixed_username_file))})')
+            else:
                 response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_fixed_username_file)
                 open(self.jira_fixed_username_file, 'w').write(response.text)
-                print(self.jira_fixed_username_file + ' downloaded')
-            if not os.path.exists(self.jira_username_avatar_mapping_file):
+                print(f'- {self.jira_fixed_username_file} downloaded')
+
+            if os.path.exists(self.jira_username_avatar_mapping_file):
+                print(f'- {self.jira_username_avatar_mapping_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_username_avatar_mapping_file))})')
+            else:
                 response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_username_avatar_mapping_file)
                 open(self.jira_username_avatar_mapping_file, 'w').write(response.text)
-                print(self.jira_username_avatar_mapping_file + ' downloaded')
+                print(f'- {self.jira_username_avatar_mapping_file} downloaded')
 
             # As avatars can only be displayed if they're hosted, load its mapping only in that case
             self.jira_user_avatars = fetch_jira_user_avatars(self.jira_username_avatar_mapping_file)
