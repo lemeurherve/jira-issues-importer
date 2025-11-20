@@ -401,31 +401,26 @@ class Project:
                 comment_id = comment.get('id')
                 comment_author = self._username_and_avatar(comment.get('author'), 'for_comment')
                 a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
+                comment_raw_details = ''
                 if comment.text is not None:
                     comment_text = self._clean_html(comment.text)
                     comment_raw = comment.text.replace('<br/>', '')
-                    comment_raw_details = (
-                        f'\n<details><summary><sub><i>Raw content of original comment:</i></sub></summary>\n'
-                        f'\n<pre>'
-                        f'\n{comment_raw}'
-                        f'\n</pre>'
-                        f'\n</details>'
-                    )
-                else:
-                    comment_raw = ''
-                    comment_raw_details = ''
-                    comment_text = ''
-
-                if len(comment_raw_details) > 65000:
-                    comment_body = f'<sup><i>{a_comment_link}comment</a> from <b>{comment_author}</b>:</i></sup>'
-                    comment_body += f'\n{comment_text}'
-                else:
-                    comment_body = (
-                        f'\n<details><summary><i>{a_comment_link}comment</a> from <b>{comment_author}</b>:</i></summary>\n'
-                        f'\n{comment_raw_details}\n'
-                        f'\n</details>'
-                        f'\n{comment_text}'
-                    )
+                    if len(comment_raw_details) < 65000:
+                        comment_raw_details = (
+                            f'\n<details><summary><i>Raw content of original comment:</i></summary>\n'
+                            f'\n<pre>'
+                            f'\n{comment_raw}'
+                            f'\n</pre>'
+                            f'\n</details>'
+                        )
+                comment_body = (
+                    f'\n<details><summary><i>{comment_author}:</i></summary>\n'
+                    f'\n<ul><li><i>Original {a_comment_link}comment link</a></i>\n'
+                    f'\n<li>{comment_raw_details}\n'
+                    f'\n</ul>'
+                    f'\n</details>'
+                    f'\n{comment_text}'
+                )
 
                 # References for better searching
                 comment_body += (
