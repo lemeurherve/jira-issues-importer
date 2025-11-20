@@ -473,9 +473,7 @@ class Project:
     def _find_epic_link_key(self, item):
         for customfield in item.customfields.findall('customfield'):
             if customfield.get('key') == 'com.pyxis.greenhopper.jira:gh-epic-link':
-                epic_key = customfield.customfieldvalues.customfieldvalue
-                self._project['Issues'][-1]['epic-link'] = epic_key
-                return epic_key
+                return customfield.customfieldvalues.customfieldvalue
         return None
 
     def _htmlentitydecode(self, s):
