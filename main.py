@@ -17,6 +17,16 @@ jira_base_url = os.getenv('JIRA_MIGRATION_JIRA_URL') or input('Jira base url [de
 ac = os.getenv('JIRA_MIGRATION_GITHUB_NAME') or input('GitHub account name (user/org): ') or 'jenkins-infra'
 repo = os.getenv('JIRA_MIGRATION_GITHUB_REPO') or input('GitHub repository name: ') or 'helpdesk'
 pat = os.getenv('JIRA_MIGRATION_GITHUB_ACCESS_TOKEN') or input('Github Personal Access Token: ') # or '<your-github-pat>'
+print(
+    f'Parameters taken in account:\n'
+    f'- XML file: {file_names}\n'
+    f'- Jira project name: {jira_proj}\n'
+    f'- Jira Done statusCategory ID: {jira_done_id}\n'
+    f'- Jira base url: {jira_base_url}\n'
+    f'- GitHub account name: {ac}\n'
+    f'- GitHub repository name: {repo}\n'
+)
+
 start_from_issue = input('Start from [default "0" (beginning)]: ') or '0'
 
 Options = namedtuple("Options", "accesstoken account repo")
