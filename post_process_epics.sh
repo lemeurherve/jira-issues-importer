@@ -21,7 +21,7 @@ fi
 # jenkins core has around 600
 SEARCH_LIMIT=1000
 
-ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "${github_repo}" --limit $SEARCH_LIMIT --state=all --match body --json title,number,labels,url -- 'jira_relationships_epic_key=')
+ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "${github_repo}" --limit $SEARCH_LIMIT --match body --json title,number,labels,url -- 'jira_relationships_epic_key=')
 ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES_WITH_EPICS}"| jq '.[].number' | sort -g | uniq)
 
 echo "${ALL_ISSUES_WITH_EPICS}" | jq '.[] | [.title, .url]'
@@ -45,7 +45,7 @@ while IFS= read -r ISSUE_CHECKING; do
       exit 13
     fi
 
-    EPIC_ISSUES_JSON=$(gh search issues --repo "${github_repo}" --state=all --match body "jira_issue_key=${JIRA_ISSUE_KEY}"  --json number,repository)
+    EPIC_ISSUES_JSON=$(gh search issues --repo "${github_repo}" --match body "jira_issue_key=${JIRA_ISSUE_KEY}"  --json number,repository)
     EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\""${github_repo}"\"').number' | sort -u -r | head -1)
     # can be empty if epic is not in core component
     if [ -n "${EPIC_ISSUE_NUMBER}"  ]
