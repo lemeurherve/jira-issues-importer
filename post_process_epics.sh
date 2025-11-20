@@ -38,8 +38,8 @@ while IFS= read -r ISSUE_CHECKING; do
     JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -n 's/.*jira_relationship_key=\([^]]*\).*/\1/p')
     echo "Found epic ${JIRA_ISSUE_KEY}"
 
-    EPIC_ISSUES_JSON=$(gh search issues --repo "$OWNER/$REPO" --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
-    EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\"${OWNER}/${REPO}\"').number')
+    EPIC_ISSUES_JSON=$(gh search issues --repo "${github_repo}" --match body "jira_issue_is_epic_key=${JIRA_ISSUE_KEY}"  --json number,repository)
+    EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\""${github_repo}"\"').number' | sort -u -r | head -1)
     # can be empty if epic is not in core component
     if [ -n "$EPIC_ISSUE_NUMBER"  ]
     then
