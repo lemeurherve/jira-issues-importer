@@ -152,6 +152,8 @@ class Project:
             if converted_label is not None:
                 labels.append(converted_label[:50])
 
+        labels = list(filter(None, set(labels))) # Unique labels, filter out None
+
         body = self._clean_html(item.description.text)
 
         ## imported issue details block
@@ -264,6 +266,17 @@ class Project:
         # References for better searching
         body += '\n\n<!-- ### Imported Jira references for easier searching -->'
         body += f'\n<!-- [jira_issue_key={item.key.text}] -->'
+        # TODO: map Jira issue types <> GitHub issue types
+        # add github_issue_type (for post-process)
+        # then don't add jira-type:<type> labels
+        issue_type = ' '.join(item.type.text.strip().split())
+        body += f'\n<!-- [jira_issue_type={issue_type}] -->'
+        # epic
+        if issue_type == 'Epic':
+            body += f'\n<!-- [jira_issue_is_epic_key={item.key.text}] -->'
+        epic_key = self._find_epic_link_key(item)
+        if epic_key:
+            body += f'\n<!-- [jira_relationships_epic_key={epic_key}] -->'
         # Putting both username and full name for reporter and assignee in case they differ
         body += f'\n<!-- [reporter={reporter_username}] -->'
         if assignee_username:
@@ -280,8 +293,6 @@ class Project:
         # Add version of the importer for future references
         body += '\n<!-- [importer_version=' + self.version + '] -->'
 
-        unique_labels = list(set(labels))
-
         self._project['Issues'].append({'title': item.title.text,
                                         'key': item.key.text,
                                         'body': body,
@@ -289,7 +300,7 @@ class Project:
                                         'closed_at': closed_at,
                                         'updated_at': self._convert_to_iso(item.updated.text),
                                         'closed': closed,
-                                        'labels': unique_labels,
+                                        'labels': labels,
                                         'comments': [],
                                         'duplicates': [],
                                         'is-duplicated-by': [],
@@ -457,10 +468,15 @@ class Project:
         except KeyError:
             print('2. KeyError at ' + item.key.text)
 
+        self._project['Issues'][-1]['epic-link'] = self._find_epic_link_key(item)
+
+    def _find_epic_link_key(self, item):
         for customfield in item.customfields.findall('customfield'):
             if customfield.get('key') == 'com.pyxis.greenhopper.jira:gh-epic-link':
                 epic_key = customfield.customfieldvalues.customfieldvalue
                 self._project['Issues'][-1]['epic-link'] = epic_key
+                return epic_key
+        return None
 
     def _htmlentitydecode(self, s):
         if s is None:

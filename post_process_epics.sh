@@ -9,48 +9,67 @@ OWNER=${1:-timja-org}
 REPO=${2:-jenkins-gh-issues-poc-11-04}
 START_FROM=${3:-0}
 
+github_repo="${OWNER}/${REPO}"
+github_issues_link="https://github.com/${OWNER}/${REPO}/issues"
+
+# See https://github.com/cli/cli/issues/10298
+if ! gh sub-issue --version >/dev/null 2>&1; then
+  echo "'sub-issue' gh extension not found. Execute 'gh extension install yahsan2/gh-sub-issue' first"
+  exit 1
+fi
+
 # jenkins core has around 600
 SEARCH_LIMIT=1000
 
-ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "$OWNER/$REPO" --limit $SEARCH_LIMIT --match comments --json title,number,labels,url -- 'Epic:')
+ALL_ISSUES_WITH_EPICS=$(gh search issues --repo "${github_repo}" --limit $SEARCH_LIMIT --match body --json title,number,labels,url -- 'jira_relationships_epic_key=')
 ALL_ISSUE_NUMBERS=$(echo "${ALL_ISSUES_WITH_EPICS}"| jq '.[].number' | sort -g | uniq)
 
 while IFS= read -r ISSUE_CHECKING; do
   if (( ISSUE_CHECKING < START_FROM )); then
     continue
   fi
-  echo "Checking $ISSUE_CHECKING"
-  COMMENT_JSON=$(gh issue view -R ${OWNER}/${REPO} "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[] | select(any(.body; contains("[Epic:")))')
+  echo "---"
+  echo "Checking ${github_issues_link}/${ISSUE_CHECKING}"
+  # TODO: retrieve epic key from child issue body directly and get rid of the epic comment here and in project.py
+  COMMENT_JSON=$(gh issue view -R "${github_repo}" "${ISSUE_CHECKING}" --comments --json 'comments' --jq '.comments[] | select(any(.body; contains("jira_relationship_type=epic")))')
   COMMENT=$(echo "$COMMENT_JSON" | jq -r '.body')
   COMMENT_NUMBER=$(echo "$COMMENT_JSON" | jq -r '.url' | awk -F 'issuecomment-' '{print $2}')
 
-  if [ -n "$COMMENT"  ]
+  if [ -n "$COMMENT" ]
   then
-    JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -r 's#^.*<a href="[^"]+">([^<]+)</a>.*$#\1#')
-    echo "Found epic $JIRA_ISSUE_KEY"
+    JIRA_ISSUE_KEY=$(echo "$COMMENT" | sed -n 's/.*jira_relationship_key=\([^]]*\).*/\1/p')
+    echo "Found epic ${JIRA_ISSUE_KEY}"
 
-    EPIC_ISSUES_JSON=$(gh search issues --repo "$OWNER/$REPO" --match title "${JIRA_ISSUE_KEY}"  --json number,repository)
-    EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\"${OWNER}/${REPO}\"').number')
+    EPIC_ISSUES_JSON=$(gh search issues --repo "${github_repo}" --match body "jira_issue_is_epic_key=${JIRA_ISSUE_KEY}"  --json number,repository)
+    EPIC_ISSUE_NUMBER=$(echo "$EPIC_ISSUES_JSON" | jq '.[] | select(.repository.nameWithOwner == '\""${github_repo}"\"').number' | sort -u -r | head -1)
     # can be empty if epic is not in core component
-    if [ -n "$EPIC_ISSUE_NUMBER"  ]
+    if [ -n "${EPIC_ISSUE_NUMBER}" ]
     then
-      echo "Found issue for epic: $EPIC_ISSUE_NUMBER"
+      echo "Found issue for epic: ${github_issues_link}/${EPIC_ISSUE_NUMBER}"
 
-      BODY=$(gh issue view -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" --json body --jq '.body')
-      # gh extension install yahsan2/gh-sub-issue
-      # see https://github.com/cli/cli/issues/10298
-      gh sub-issue add -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" "${ISSUE_CHECKING}" || true
-      # no cli support https://github.com/cli/cli/issues/9696
-      gh api -X PATCH repos/$OWNER/$REPO/issues/$EPIC_ISSUE_NUMBER --field type=Epic > /dev/null || true
-      gh issue edit --remove-label epic -R ${OWNER}/${REPO} "${EPIC_ISSUE_NUMBER}" || true
-
+      # add current issue as epic sub issue
+      gh sub-issue add -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" "${ISSUE_CHECKING}" || true
+      # issue type (no cli support https://github.com/cli/cli/issues/9696)
+      gh api -X PATCH "repos/${github_repo}/issues/${EPIC_ISSUE_NUMBER}" --field type=Epic > /dev/null || true
+      # delete epic label if any
+      if gh issue view -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" --json labels --jq '.labels[].name' | grep -q -w -e 'epic' -e 'jira-type:epic'; then
+        gh issue edit --remove-label 'epic' -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" || true
+        gh issue edit --remove-label 'jira-type:epic' -R "${github_repo}" "${EPIC_ISSUE_NUMBER}" || true
+      else
+        echo 'No epic label found'
+      fi
+      # delete epic comment
       gh api \
         --method DELETE \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
-        /repos/$OWNER/$REPO/issues/comments/$COMMENT_NUMBER
+        "/repos/${github_repo}/issues/comments/${COMMENT_NUMBER}"
       sleep 1
+    else
+      echo "${JIRA_ISSUE_KEY} not found in imported issues"
     fi
+  else
+    echo "COMMENT empty"
   fi
 done <<< "${ALL_ISSUE_NUMBERS}"
 
