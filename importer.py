@@ -283,7 +283,7 @@ class Importer:
 
         if epic_key:
             issue['comments'].append(
-                {"body": _comment_body(jira_key, 'epic')})
+                {"body": _comment_body(epic_key, 'epic')})
 
         del issue['duplicates']
         del issue['is-duplicated-by']
