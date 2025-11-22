@@ -16,6 +16,7 @@ class Project:
 
     def __init__(self, name, doneStatusCategoryId, jiraBaseUrl):
         self.name = name
+        self.current_datedime = datetime.today().strftime('%Y-%m-%d')
         self.doneStatusCategoryId = doneStatusCategoryId
         self.jiraBaseUrl = jiraBaseUrl
         self._project = {'Milestones': defaultdict(int), 'Components': defaultdict(
@@ -218,7 +219,7 @@ class Project:
             pass
         body += '\n<li><b>votes</b>: ' + str(item.votes)
         body += '\n<li><b>watchers</b>: ' + str(item.watches)
-        body += '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
+        body += '\n<li><b>imported</b>: ' + self.current_datedime
         body += '\n</ul></i>'
         if item.description.text is not None:
             body += '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'
