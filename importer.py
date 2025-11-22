@@ -192,6 +192,10 @@ class Importer:
         Uploads a single issue to GitHub asynchronously with the Issue Import API.
         """
         issue_url = self.github_url + '/import/issues'
+        # Delete keys starting with "_", only there for data gathering, not for issue upload
+        for key in list(issue):
+            if key.startswith('_'):
+                issue.pop(key)
         issue_data = {'issue': issue, 'comments': comments}
         response = requests.post(issue_url, json=issue_data, headers=self.headers, 
             timeout=Importer._DEFAULT_TIME_OUT)
