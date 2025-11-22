@@ -179,11 +179,12 @@ class Importer:
         status_url = response.json()['url']
         gh_issue_url = self.wait_for_issue_creation(status_url).json()['issue_url']
         gh_issue_id = int(gh_issue_url.split('/')[-1])
-        issue['githubid'] = gh_issue_id
-        issue['key'] = jira_key
+        issue['github_issue_id'] = gh_issue_id
+        issue['jira_issue_key'] = jira_key
 
         jira_gh = f"{jira_key}:{gh_issue_id}\n"
-        with open('jira-keys-to-github-id.txt', 'a') as f:
+        txt_mapping = f'{self.project.current_datedime}_jira-keys-to-github-id.txt'
+        with open(txt_mapping, 'a') as f:
             f.write(jira_gh)
 
     def upload_github_issue(self, issue, comments):
