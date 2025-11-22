@@ -264,34 +264,37 @@ class Project:
             pass
 
         # References for better searching
-        body += '\n\n<!-- ### Imported Jira references for easier searching -->'
-        body += f'\n<!-- [jira_issue_key={item.key.text}] -->'
+        hidden_refs = '<!-- ### Imported Jira references for easier searching -->'
+        hidden_refs += f'\n<!-- [jira_issue_key={item.key.text}] -->'
         # TODO: map Jira issue types <> GitHub issue types
         # add github_issue_type (for post-process)
         # then don't add jira-type:<type> labels
         issue_type = ' '.join(item.type.text.strip().split())
-        body += f'\n<!-- [jira_issue_type={issue_type}] -->'
+        hidden_refs += f'\n<!-- [jira_issue_type={issue_type}] -->'
         # epic
         if issue_type == 'Epic':
-            body += f'\n<!-- [jira_issue_is_epic_key={item.key.text}] -->'
+            hidden_refs += f'\n<!-- [jira_issue_is_epic_key={item.key.text}] -->'
         epic_key = self._find_epic_link_key(item)
         if epic_key:
-            body += f'\n<!-- [jira_relationships_epic_key={epic_key}] -->'
+            hidden_refs += f'\n<!-- [jira_relationships_epic_key={epic_key}] -->'
         # Putting both username and full name for reporter and assignee in case they differ
-        body += f'\n<!-- [reporter={reporter_username}] -->'
+        hidden_refs += f'\n<!-- [reporter={reporter_username}] -->'
         if assignee_username:
-            body += f'\n<!-- [assignee={assignee_username}] -->'
+            hidden_refs += f'\n<!-- [assignee={assignee_username}] -->'
         # Adding the reporter as "author" too in those references
-        body += f'\n<!-- [author={reporter_username}] -->'
+        hidden_refs += f'\n<!-- [author={reporter_username}] -->'
         # components
         for component in item.component:
-            body += f'\n<!-- [jira_component={component.text}] -->'
+            hidden_refs += f'\n<!-- [jira_component={component.text}] -->'
         # labels
         for label in item.labels.findall('label'):
-            body += f'\n<!-- [jira_label={label.text}] -->'
+            hidden_refs += f'\n<!-- [jira_label={label.text}] -->'
 
         # Add version of the importer for future references
-        body += '\n<!-- [importer_version=' + self.version + '] -->'
+        hidden_refs += '\n<!-- [jira_issues_importer_version=' + self.version + '] -->'
+
+        # Put hidden refs on top of body
+        body = hidden_refs + '\n\n' + body
 
         self._project['Issues'].append({'title': item.title.text,
                                         'key': item.key.text,
@@ -426,12 +429,12 @@ class Project:
                 )
 
                 # References for better searching
-                comment_body += (
-                    f'\n\n<!-- ### Imported Jira references for easier searching -->'
-                    f'\n<!-- [jira_issue_key={item.key.text}] -->'
-                    f'\n<!-- [jira_comment_id={comment_id}] -->'
-                    f'\n<!-- [comment_author={comment_username}] -->'
-                )
+                comment_body = (
+                    f'<!-- ### Imported Jira references for easier searching -->\n'
+                    f'<!-- [jira_issue_key={item.key.text}] -->\n'
+                    f'<!-- [jira_comment_id={comment_id}] -->\n'
+                    f'<!-- [comment_author={comment_username}] -->\n'
+                ) + comment_body
 
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
