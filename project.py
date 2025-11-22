@@ -429,12 +429,12 @@ class Project:
                 )
 
                 # References for better searching
-                comment_body += (
-                    f'\n\n<!-- ### Imported Jira references for easier searching -->'
-                    f'\n<!-- [jira_issue_key={item.key.text}] -->'
-                    f'\n<!-- [jira_comment_id={comment_id}] -->'
-                    f'\n<!-- [comment_author={comment_username}] -->'
-                )
+                comment_body = (
+                    f'<!-- ### Imported Jira references for easier searching -->\n'
+                    f'<!-- [jira_issue_key={item.key.text}] -->\n'
+                    f'<!-- [jira_comment_id={comment_id}] -->\n'
+                    f'<!-- [comment_author={comment_username}] -->\n'
+                ) + comment_body
 
                 self._project['Issues'][-1]['comments'].append(
                     {"created_at": self._convert_to_iso(comment.get('created')),
