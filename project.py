@@ -16,6 +16,7 @@ class Project:
 
     def __init__(self, name, doneStatusCategoryId, jiraBaseUrl):
         self.name = name
+        self.current_datedime = datetime.today().strftime('%Y-%m-%d')
         self.doneStatusCategoryId = doneStatusCategoryId
         self.jiraBaseUrl = jiraBaseUrl
         self._project = {'Milestones': defaultdict(int), 'Components': defaultdict(
@@ -218,7 +219,7 @@ class Project:
             pass
         body += '\n<li><b>votes</b>: ' + str(item.votes)
         body += '\n<li><b>watchers</b>: ' + str(item.watches)
-        body += '\n<li><b>imported</b>: ' + datetime.today().strftime('%Y-%m-%d')
+        body += '\n<li><b>imported</b>: ' + self.current_datedime
         body += '\n</ul></i>'
         if item.description.text is not None:
             body += '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'
@@ -296,6 +297,7 @@ class Project:
         # Put hidden refs on top of body
         body = hidden_refs + '\n\n' + body
 
+        # _ keys are only there for gathering import data
         self._project['Issues'].append({'title': item.title.text,
                                         'key': item.key.text,
                                         'body': body,
@@ -309,7 +311,9 @@ class Project:
                                         'is-duplicated-by': [],
                                         'is-related-to': [],
                                         'depends-on': [],
-                                        'blocks': []
+                                        'blocks': [],
+                                        '_watchers_count': str(item.watches),
+                                        '_votes_count': str(item.votes),
                                         })
         if not self._project['Issues'][-1]['closed_at']:
             del self._project['Issues'][-1]['closed_at']
