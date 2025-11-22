@@ -489,7 +489,7 @@ class Project:
         # Handle {code}: need special handling as Jira insert HTML spans for {code} block content highlighting
         s = re.sub(r'<div class="code panel" style="border-width: 1px;"><div class="codeContent panelContent">\n<pre class="code-[^"]*">(.*?)</pre>\n</div></div>', r'\n<pre>\n\1</pre>', s, flags=re.DOTALL)
         # Handle {noformat}
-        s = re.sub(r'<div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">\n<pre>(.*?)</pre>\n</div></div>', r'\n\n```\n\1```', s, flags=re.DOTALL)
+        s = re.sub(r'<div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">\n<pre>(.*?)</pre>\n</div></div>', r'\n\n```\n\1\n```', s, flags=re.DOTALL)
         # Handle {panel:title}: processed first to avoid matching by the no-title pattern
         s = re.sub(r'<div class="panel" style="border-width: 1px;"><div class="panelHeader" style="border-bottom-width: 1px;"><b>(.*?)</b></div><div class="panelContent">\s*(.*?)\s*</div></div>', r'\n\n<table><tr><td><b>\1</b></td></tr><tr><td>\2</td></tr></table>\n', s, flags=re.DOTALL)
         # Handle {panel}
