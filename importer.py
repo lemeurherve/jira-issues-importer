@@ -1,9 +1,11 @@
 import os
 import requests
 import time
+import json
+import copy
+import re
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
-
 
 class Importer:
     _GITHUB_ISSUE_PREFIX = "INFRA-"
@@ -93,7 +95,6 @@ class Importer:
                 self.project.get_milestones()[mkey] = content['number']
                 print(mkey)
 
-
     def import_labels(self, colour_selector):
         """
         Imports the gathered project components and labels as labels into GitHub 
@@ -123,6 +124,33 @@ class Importer:
                 print('Failure importing label ' + prefixed_lkey,
                       r.status_code, r.content, r.headers)
 
+    def _find_jira_links(self, text):
+        """
+        Finds all Jira links in the given text.
+        Returns a list of unique Jira links found.
+        """
+        if not text:
+            return []
+
+        jira_links = []
+
+        # Pattern 1: Full Jira URLs like https://issues.jenkins.io/browse/INFRA-123
+        # excluding "no-jira-link-rewrite" links
+        full_url_pattern = (
+            rf'(?<!<a class="no-jira-link-rewrite" href=")'
+            rf'{self.project.jiraBaseUrl}/browse/({self.project.name}-\d+)'
+        )
+        full_urls = re.findall(full_url_pattern, text)
+        jira_links.extend(full_urls)
+
+        # Pattern 2: Project key format like INFRA-123
+        project_key_pattern = self.project.name + r'-(\d+)'
+        project_keys = re.findall(project_key_pattern, text)
+        jira_links.extend([f'{self.project.name}-{key}' for key in project_keys])
+
+        # Return unique links
+        return list(set(jira_links))
+
     def import_issues(self, start_from_count):
         """
         Starts the issue import into GitHub:
@@ -134,6 +162,8 @@ class Importer:
         print('Importing issues...')
 
         count = 0
+        issue_mappings = []
+        github_issue_ids = {}
 
         for issue in self.project.get_issues():
             if start_from_count > count:
@@ -147,6 +177,10 @@ class Importer:
                     issue['milestone_name']]
                 del issue['milestone_name']
 
+            original_issue_comments = issue['comments']
+            issue_watchers_count = issue['_watchers_count']
+            issue_votes_count = issue['_votes_count']
+
             self.convert_relationships_to_comments(issue)
 
             issue_comments = issue['comments']
@@ -157,7 +191,63 @@ class Importer:
                     dict((k, self._replace_jira_with_github_id(v)) for k, v in comment.items()))
 
             self.import_issue_with_comments(issue, comments)
+
+            # Storing if issue and/or comments have Jira links in order to facilitate post-process
+            issue_mapping = copy.deepcopy(issue)
+            issue_mapping['watchers_count'] = issue_watchers_count
+            issue_mapping['has_watchers'] = 'true' if issue_watchers_count > 0 else 'false'
+            issue_mapping['votes_count'] = issue_votes_count
+            issue_mapping['has_votes'] = 'true' if issue_votes_count > 0 else 'false'
+            issue_mapping['jira_links'] = []
+            issue_mapping['jira_links_in_comments'] = []
+
+            issue_links = self._find_jira_links(issue_mapping['body'])
+            del issue_mapping['body']
+            if issue_links:
+                issue_mapping['jira_links'] = issue_links
+                issue_mapping['jira_links_in_body'] = issue_links
+                issue_mapping['has_jira_links'] = 'true'
+                issue_mapping['has_jira_links_in_body'] = 'true'
+
+            for comment in original_issue_comments:
+                comment_links = self._find_jira_links(comment['body'])
+                if comment_links:
+                    issue_mapping['jira_links'].extend(comment_links)
+                    issue_mapping['jira_links_in_comments'].extend(comment_links)
+                    issue_mapping['has_jira_links'] = 'true'
+                    issue_mapping['has_jira_links_in_comments'] = 'true'
+            issue_mapping['jira_links'] = list(set(issue_mapping['jira_links']))
+            issue_mapping['jira_links_in_body'] = list(set(issue_mapping['jira_links_in_body']))
+            issue_mapping['jira_links_in_comments'] = list(set(issue_mapping['jira_links_in_comments']))
+
+            issue_mappings.append(issue_mapping)
+            github_issue_ids[issue_mapping['jira_issue_key']] = issue_mapping['github_issue_id']
+
             count += 1
+
+        # Find Jira links that have been imported and that can be rewritten in post-process
+        for mapping in issue_mappings:
+            if mapping['has_jira_links']:
+                mapping['jira_links_imported'] = []
+                mapping['jira_links_in_body_imported'] = []
+                mapping['jira_links_in_comments_imported'] = []
+                for jira_key in mapping['jira_links_in_body']:
+                    if jira_key in github_issue_ids:
+                        mapping['jira_links_imported'].append(jira_key)
+                        mapping['jira_links_in_body_imported'].append(jira_key)
+                for jira_key in mapping['jira_links_in_comments']:
+                    if jira_key in github_issue_ids:
+                        mapping['jira_links_imported'].append(jira_key)
+                        mapping['jira_links_in_comments_imported'].append(jira_key)
+                mapping['jira_links_imported'] = list(set(mapping['jira_links_imported']))
+                mapping['jira_links_in_body_imported'] = list(set(mapping['jira_links_in_body_imported']))
+                mapping['jira_links_in_comments_imported'] = list(set(mapping['jira_links_in_comments_imported']))
+
+        # Save collected data to JSON after all issues are imported
+        json_mapping = f'{self.project.current_datedime}_jira-to-github-mapping.json'
+        with open(json_mapping, 'w', encoding='utf-8') as f:
+            json.dump(issue_mappings, f, indent=2, ensure_ascii=False)
+        print(json_mapping + ' saved.')
 
     def import_issue_with_comments(self, issue, comments):
         """
