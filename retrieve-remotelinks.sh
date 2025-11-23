@@ -8,7 +8,7 @@ set -euo pipefail
 : "${JIRA_MIGRATION_PARALLEL_COUNT:=50}"
 
 input_file="jira_output/combined.xml"
-remotelinks_file="core-cli-issues-remotelinks.txt"
+remotelinks_file="combined-remotelinks.txt"
 
 jira_base="${JIRA_MIGRATION_JIRA_URL}/rest/api/2/issue"
 
@@ -61,8 +61,6 @@ update_progress() {
     printf "\r[%s/%s | %s%%] Processing..." "$current" "$total" "$percent" >&2
 }
 
-progress_file=$(mktemp)
-echo 0 > "$progress_file"
 export progress_file
 export -f update_progress
 
