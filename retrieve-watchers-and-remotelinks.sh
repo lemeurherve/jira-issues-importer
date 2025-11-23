@@ -7,11 +7,17 @@ set -euo pipefail
 : "${JIRA_MIGRATION_JIRA_TOKEN:? Missing Jira token}"
 : "${JIRA_MIGRATION_PARALLEL_COUNT:=8}"
 
-input_file="jira_output/combined.xml"
+input_file="jira_output_core_cli/combined.xml"
 watchers_file="core-cli-issues-watchers-usernames-and-emails.txt"
 remotelinks_file="core-cli-issues-remotelinks.txt"
 
 jira_base="${JIRA_MIGRATION_JIRA_URL}/rest/api/2/issue"
+
+if ! command -v flock >/dev/null 2>&1; then
+    echo "Error: 'flock' is required but not installed on this system." >&2
+    echo "Install it first. On macOS: brew install flock" >&2
+    exit 1
+fi
 
 echo "Check ${JIRA_MIGRATION_JIRA_URL} connectivity"
 response_code=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -42,13 +48,19 @@ progress_file=$(mktemp)
 echo 0 > "${progress_file}"
 
 update_progress() {
-    # atomic fetch/increment
-    local current
-    current=$(($(tail -n1 "${progress_file}") + 1))
-    echo "${current}" >> "${progress_file}"
+    {
+        flock 200
 
-    local percent=$((100 * current / total))
-    printf "\r[%s/%s | %s%%] Processing..." "${current}" "${total}" "${percent}" >&2
+        # Read the current value
+        current=$(cat "$progress_file")
+        current=$((current + 1))
+
+        # Write the updated value
+        echo "$current" > "$progress_file"
+    } 200>"$progress_file.lock"
+
+    percent=$((100 * current / total))
+    printf "\r[%s/%s | %s%%] Processing..." "$current" "$total" "$percent" >&2
 }
 
 export progress_file
