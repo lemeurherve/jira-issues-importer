@@ -32,6 +32,7 @@ issues=$(grep '<key id=' "${input_file}" | sed "s/.*\(${JIRA_MIGRATION_JIRA_PROJ
 total=$(printf "%s\n" "${issues}" | grep -c .)
 
 echo "Total issues: ${total}"
+echo "Parallel count: ${JIRA_MIGRATION_PARALLEL_COUNT}"
 
 # Export for subshells
 export JIRA_MIGRATION_JIRA_TOKEN jira_base watchers_file remotelinks_file total
