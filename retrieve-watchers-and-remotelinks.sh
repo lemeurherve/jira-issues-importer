@@ -5,7 +5,7 @@ set -euo pipefail
 : "${JIRA_MIGRATION_JIRA_URL:? Missing Jira base URL (e.g., https://issues.jenkins.io)}"
 : "${JIRA_MIGRATION_JIRA_USER:? Missing Jira user}"
 : "${JIRA_MIGRATION_JIRA_TOKEN:? Missing Jira token}"
-: "${JIRA_MIGRATION_PARALLEL_COUNT:=8}"
+: "${JIRA_MIGRATION_PARALLEL_COUNT:=50}"
 
 input_file="jira_output_core_cli/combined.xml"
 watchers_file="core-cli-issues-watchers-usernames-and-emails.txt"
