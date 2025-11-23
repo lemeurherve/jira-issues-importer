@@ -405,8 +405,7 @@ class Project:
                 comment_username = self._proper_jirauser_username(comment.get('author'))
                 comment_author = self._username_and_avatar(comment_username, 'for_comment')
                 a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
-                comment_raw_details = ''
-                comment_text = ''
+                comment_raw_details = ''         
                 if comment.text is not None:
                     comment_text = self._clean_html(comment.text)
                     comment_raw = comment.text.replace('<br/>', '')
@@ -418,6 +417,8 @@ class Project:
                             f'</pre>\n'
                             f'</details>\n'
                         )
+                else:
+                    continue
                 comment_body = (
                     f'<details><summary><i>{comment_author}:</i></summary>\n\n'
                     f'<ul>\n'
