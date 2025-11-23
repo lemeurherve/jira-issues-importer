@@ -178,8 +178,8 @@ class Importer:
                 del issue['milestone_name']
 
             original_issue_comments = issue['comments']
-            issue_watchers_count = issue['_watchers_count']
-            issue_votes_count = issue['_votes_count']
+            issue_watchers_count = int(issue['_watchers_count'])
+            issue_votes_count = int(issue['_votes_count'])
 
             self.convert_relationships_to_comments(issue)
 
