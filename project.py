@@ -9,7 +9,7 @@ import time
 
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_remote_links, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
 from version import __version__
 
 class Project:
@@ -24,6 +24,7 @@ class Project:
 
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
+        self.remote_links = fetch_remote_links()
 
         self.jira_fixed_username_file = 'jira_fixed_usernames.txt'
         self.jira_username_avatar_mapping_file = 'jira_username_avatar_mapping.txt'
@@ -403,6 +404,7 @@ class Project:
             pass
 
     def _add_comments(self, item):
+        self._add_remote_links_comment(item)
         try:
             for comment in item.comments.comment:
                 comment_id = comment.get('id')
@@ -440,12 +442,31 @@ class Project:
                     f'<!-- [comment_author={comment_username}] -->\n'
                 ) + comment_body
 
-                self._project['Issues'][-1]['comments'].append(
-                    {"created_at": self._convert_to_iso(comment.get('created')),
-                     "body": comment_body
-                     })
+                self._project['Issues'][-1]['comments'].append({
+                    "created_at": self._convert_to_iso(comment.get('created')),
+                    "body": comment_body
+                })
         except AttributeError:
             pass
+
+    def _add_remote_links_comment(self, item):
+        issue_key = item.key.text
+        if issue_key in self.remote_links:
+            links = self.remote_links[issue_key]
+            plural = 's' if len(links) != 1 else ''
+
+            comment_body = (
+                f'<!-- ### Imported Jira references for easier searching -->\n'
+                f'<!-- [synthetic_comment=remote_links] -->\n'
+                f'- _Remote link{plural} associated with this issue:_\n\n'
+            )
+            for rl in links:
+                comment_body += f'\n  - {rl}'
+
+            self._project["Issues"][-1]["comments"].append({
+                "created_at": self._convert_to_iso(item.created.text),
+                "body": comment_body,
+            })
 
     def _add_relationships(self, item):
         try:
