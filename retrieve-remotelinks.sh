@@ -1,55 +1,76 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${JIRA_MIGRATION_JIRA_PROJECT_NAME:? MissingJira project name (e.g., JENKINS)}"
+: "${JIRA_MIGRATION_JIRA_PROJECT_NAME:? Missing Jira project name (e.g., JENKINS)}"
 : "${JIRA_MIGRATION_JIRA_URL:? Missing Jira base URL (e.g., https://issues.jenkins.io)}"
-: "${JIRA_MIGRATION_JIRA_USER:? Missing Jira user to be comment author (e.g., jenkins-infra-bot)}"
-: "${JIRA_MIGRATION_JIRA_TOKEN:? Missing Jira token for authentication (e.g., your-jira-token)}"
+: "${JIRA_MIGRATION_JIRA_USER:? Missing Jira user}"
+: "${JIRA_MIGRATION_JIRA_TOKEN:? Missing Jira token}"
+: "${JIRA_MIGRATION_PARALLEL_COUNT:=8}"
 
 input_file="jira_output/combined.xml"
 remotelinks_file="core-cli-issues-remotelinks.txt"
 
-
 jira_base="${JIRA_MIGRATION_JIRA_URL}/rest/api/2/issue"
 
-
 echo "Check ${JIRA_MIGRATION_JIRA_URL} connectivity"
-response_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}" "${JIRA_MIGRATION_JIRA_URL}/rest/api/2/myself")
-if [[ $response_code == 200 ]]; then
-    echo "Connected to Jira successfully."
-else
-    echo "Error: Unable to connect to JIRA. Please check your credentials and Jira URL."
+response_code=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}" \
+    "${JIRA_MIGRATION_JIRA_URL}/rest/api/2/myself")
+
+if [[ "${response_code}" != 200 ]]; then
+    echo "Error: Unable to connect to Jira"
     exit 1
 fi
 
-# Clean output files
+echo "Connected to Jira successfully."
+
 : > "${remotelinks_file}"
 
 issues=$(grep '<key id=' "${input_file}" | sed "s/.*\(${JIRA_MIGRATION_JIRA_PROJECT_NAME}-[0-9][0-9]*\).*/\1/")
+total=$(printf "%s\n" "${issues}" | grep -c .)
 
-total=$(printf "%s\n" "$issues" | grep -c .)
-count=0
+echo "Total issues: ${total}"
 
-for issue in $issues; do
-    count=$(( count + 1 ))
-    percent=$(( 100 * count / total ))
+# Export for subshells
+export JIRA_MIGRATION_JIRA_TOKEN jira_base remotelinks_file total
 
+# Progress counter using a file (atomic append)
+progress_file=$(mktemp)
+echo 0 > "${progress_file}"
+
+update_progress() {
+    # atomic fetch/increment
+    local current
+    current=$(($(tail -n1 "${progress_file}") + 1))
+    echo "${current}" >> "${progress_file}"
+
+    local percent=$((100 * current / total))
+    printf "\r[%s/%s | %s%%] Processing..." "${current}" "${total}" "${percent}" >&2
+}
+
+export progress_file
+export -f update_progress
+
+process_issue() {
+    issue="$1"
     remotelinks_url="${jira_base}/${issue}/remotelink"
 
-    echo "[$count/$total | ${percent}%] Issue ${issue} ..." >&2
-
-    # Retrieve remote links JSON
-    json=$(curl -s \
-        -H "Content-Type: application/json" \
+    # Fetch remote links
+    remotelinks_json=$(curl -s \
         -H "Authorization: Bearer ${JIRA_MIGRATION_JIRA_TOKEN}" \
-         "${remotelinks_url}")
+        "${remotelinks_url}")
 
-    # Extract remote links
-    echo "${json}" | jq -r --arg issue "${issue}" '
+    printf "%s\n" "${remotelinks_json}" | jq -r --arg issue "${issue}" '
         .[]? | select(.object.url != null) |
         "\($issue):[\(.object.title)](\(.object.url))"
     ' >> "${remotelinks_file}"
 
-done
+    update_progress
+}
 
-echo "Done. Output written to ${remotelinks_file}" >&2
+export -f process_issue
+
+printf "%s\n" "${issues}" | xargs -n1 -P"${JIRA_MIGRATION_PARALLEL_COUNT}" bash -c 'process_issue "$@"' _
+
+echo -e "\nDone. Output written to ${remotelinks_file}" >&2
+rm -f "${progress_file}"
