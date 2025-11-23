@@ -99,7 +99,10 @@ export -f process_issue
 printf "%s\n" "${issues}" | xargs -n1 -P"${JIRA_MIGRATION_PARALLEL_COUNT}" bash -c 'process_issue "$@"' _
 
 echo "Escaping #nnn references in remote link titles"
-cat "${remotelinks_file}" | sed 's/#\([0-9][0-9]*\)/#\xE2\x80\x8B\1/g' > ${remotelinks_file}
+tmp=$(mktemp)
+sed 's/#\([0-9][0-9]*\)/#\xE2\x80\x8B\1/g' "${remotelinks_file}" > "$tmp"
+mv "$tmp" "${remotelinks_file}"
+
 
 echo -e "\nDone. Output written to ${watchers_file} & ${remotelinks_file}" >&2
 rm -f "${progress_file}"
