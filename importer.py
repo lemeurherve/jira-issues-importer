@@ -178,8 +178,8 @@ class Importer:
                 del issue['milestone_name']
 
             original_issue_comments = issue['comments']
-            issue_watchers_count = issue['_watchers_count']
-            issue_votes_count = issue['_votes_count']
+            issue_watchers_count = int(issue['_watchers_count'])
+            issue_votes_count = int(issue['_votes_count'])
 
             self.convert_relationships_to_comments(issue)
 
@@ -195,9 +195,9 @@ class Importer:
             # Storing if issue and/or comments have Jira links in order to facilitate post-process
             issue_mapping = copy.deepcopy(issue)
             issue_mapping['watchers_count'] = issue_watchers_count
-            issue_mapping['has_watchers'] = 'true' if int(issue_watchers_count) > 0 else 'false'
+            issue_mapping['has_watchers'] = 'true' if issue_watchers_count > 0 else 'false'
             issue_mapping['votes_count'] = issue_votes_count
-            issue_mapping['has_votes'] = 'true' if int(issue_votes_count) > 0 else 'false'
+            issue_mapping['has_votes'] = 'true' if issue_votes_count > 0 else 'false'
             issue_mapping['jira_links'] = []
             issue_mapping['jira_links_in_comments'] = []
 
