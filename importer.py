@@ -351,9 +351,11 @@ class Importer:
 
         def _comment_body(jira_key, relationship_type):
             return (
-                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
+                f'<!-- ### Imported Jira references for easier searching -->\n'
+                f'<!-- [synthetic_comment=relationship] -->\n'
                 f'<!-- [jira_relationship_key={jira_key}] -->'
-                f'<!-- [jira_relationship_type={relationship_type}] -->'
+                f'<!-- [jira_relationship_type={relationship_type}] -->\n'
+                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
             )
 
         for jira_key in duplicates:

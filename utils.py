@@ -1,6 +1,7 @@
 from lxml import objectify
 import os
 import glob
+from collections import defaultdict
 
 def fetch_labels_mapping():
     with open('labels_mapping.txt') as file:
@@ -11,6 +12,21 @@ def fetch_labels_mapping():
 def fetch_allowed_labels():
     with open('allowed_labels.txt') as file:
         return [line.strip('\n') for line in file.readlines()]
+
+def fetch_remote_links():
+    groups = defaultdict(list)
+
+    with open('combined-remotelinks.txt', "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            key = line.split(":", 1)[0]
+            link = line.split(":", 1)[1]
+            groups[key].append(link)
+
+    return dict(groups)
 
 # Ex of line: JIRAUSER134221:hlemeur
 def fetch_jira_fixed_usernames(filename):
