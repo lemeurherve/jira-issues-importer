@@ -40,6 +40,12 @@ def fetch_jira_user_avatars(filename):
         entry = [line.split(":") for line in file.readlines()]
     return {key.strip(): value.strip() for key, value in entry}
 
+# Ex of line: 64966:jenkinsci/attachments-from-jira-issues-core-cli/refs/heads/main/attachments/64966/jenkins-build3.log
+def fetch_jira_attachments(filename):
+    with open(filename) as file:
+        entry = [line.split(":") for line in file.readlines()]
+    return {key.strip(): value.strip() for key, value in entry}
+
 def _map_label(label, labels_mapping):
     if label in labels_mapping:
         return labels_mapping[label]

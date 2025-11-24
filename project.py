@@ -9,7 +9,8 @@ import time
 
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_remote_links, fetch_jira_fixed_usernames, fetch_jira_user_avatars, convert_label, proper_label_str
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, fetch_jira_attachments, fetch_remote_links, convert_label, proper_label_str
+
 from version import __version__
 
 class Project:
@@ -28,12 +29,15 @@ class Project:
 
         self.jira_fixed_username_file = 'jira_fixed_usernames.txt'
         self.jira_username_avatar_mapping_file = 'jira_username_avatar_mapping.txt'
+        self.jira_attachments_file = 'jira_attachments_repo_id_filename.txt'
+        self.jira_user_avatars = []
+        self.jira_attachments = []
         # "org/repo" hosting artifacts like avatars, attachments and username mappings
         # If not set, will use local files, and won't add avatar in issues or comments
         # Example of such repo: https://github.com/lemeurherve/artifacts-from-jira-issues-example
         self.hosted_artifact_base = None
         if not os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
-            print('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO is not set: no mapping files will be retrieved and no avatar will be rattached to issues or comments')
+            print('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO is not set: no mapping files will be retrieved, no avatar will be rattached to issues or comments, and attachment links won\'t be replaced')
         else:
             self.hosted_artifact_base = 'https://raw.githubusercontent.com/' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + '/refs/heads/main'
 
@@ -52,10 +56,21 @@ class Project:
                 response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_username_avatar_mapping_file)
                 open(self.jira_username_avatar_mapping_file, 'w').write(response.text)
                 print(f'- {self.jira_username_avatar_mapping_file} downloaded')
+
+            if os.path.exists(self.jira_attachments_file):
+                print(f'- {self.jira_attachments_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_attachments_file))})')
+            else:
+                response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_attachments_file)
+                open(self.jira_attachments_file, 'w').write(response.text)
+                print(f'- {self.jira_attachments_file} downloaded')
+
             print()
 
             # As avatars can only be displayed if they're hosted, load its mapping only in that case
             self.jira_user_avatars = fetch_jira_user_avatars(self.jira_username_avatar_mapping_file)
+
+            # As attachment links can only be replaced if they're hosted, load its mapping only in that case
+            self.jira_attachments = fetch_jira_attachments(self.jira_attachments_file)
 
         # load proper usernames mapping from file (from local file, eventually downloaded above)
         self.jira_fixed_usernames = fetch_jira_fixed_usernames(self.jira_fixed_username_file)
@@ -247,14 +262,15 @@ class Project:
             attachments = []
             image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg']
             for attachment in item.attachments.attachment:
+                attachment_id = attachment.get('id')
                 attachment_name = attachment.get('name')
                 attachment_extension = os.path.splitext(attachment_name)[1].lower()
-                attachment_txt = '[{0}]({1}/secure/attachment/{2}/{3})'.format(
-                    attachment_name,
-                    self.jiraBaseUrl,
-                    attachment.get('id'),
-                    quote(attachment_name),
-                )
+
+                attachment_url = f'{self.jiraBaseUrl}/secure/attachment/{attachment_id}/{quote(attachment_name)}'
+                if attachment_id in self.jira_attachments:
+                    attachment_url = 'https://raw.githubusercontent.com/' + quote(self.jira_attachments[attachment_id])
+
+                attachment_txt = f'[{attachment_name}]({attachment_url})'
                 if attachment_extension in image_extensions:
                     attachment_txt = attachment_txt + '\n  > !' + attachment_txt
 
@@ -403,8 +419,38 @@ class Project:
         except AttributeError:
             pass
 
+    def _rewrite_attachment_urls(self, html, attachment_map):
+        if not self.hosted_artifact_base:
+            return html  # nothing to rewrite
+
+        # Pattern to match attachment or thumbnail URLs
+        pattern = re.compile(
+            rf'{self.jiraBaseUrl}/secure/(?:attachment|thumbnail)/(\d+)/(?:[^"]+)',
+            re.IGNORECASE
+        )
+
+        def repl(m):
+            attachment_id = m.group(1)
+            filename = attachment_map.get(attachment_id)
+            if not filename:
+                return m.group(0)
+            if attachment_id not in self.jira_attachments:
+                return m.group(0)
+            return 'https://raw.githubusercontent.com/' + quote(self.jira_attachments[attachment_id])
+
+        return pattern.sub(repl, html)
+
     def _add_comments(self, item):
+
         self._add_remote_links_comment(item)
+
+        attachment_map = {}
+        try:
+            for att in item.attachments.attachment:
+                attachment_map[att.get('id')] = att.get('name')
+        except AttributeError:
+            pass
+
         try:
             for comment in item.comments.comment:
                 comment_id = comment.get('id')
@@ -414,8 +460,9 @@ class Project:
                 comment_raw_details = ''
                 comment_text = ''
                 if comment.text is not None:
-                    comment_text = self._clean_html(comment.text)
-                    comment_raw = comment.text.replace('<br/>', '')
+                    raw_html = comment.text
+                    comment_text = self._clean_html(self._rewrite_attachment_urls(raw_html, attachment_map))
+                    comment_raw = raw_html.replace('<br/>', '')
                     if len(comment_raw_details) < 65000:
                         comment_raw_details = (
                             f'<li><details><summary><i>Raw content of original comment:</i></summary>\n\n'
