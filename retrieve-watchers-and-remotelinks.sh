@@ -9,6 +9,7 @@ set -euo pipefail
 
 input_file="jira_output/combined.xml"
 watchers_file="combined-watchers-usernames-and-emails.txt"
+unique_watchers_file="combined-unique-watchers-emails.txt"
 remotelinks_file="combined-remotelinks.txt"
 
 jira_base="${JIRA_MIGRATION_JIRA_URL}/rest/api/2/issue"
@@ -31,7 +32,9 @@ fi
 
 echo "Connected to Jira successfully."
 
+# Ensure output files are empty
 : > "${watchers_file}"
+: > "${unique_watchers_file}"
 : > "${remotelinks_file}"
 
 issues=$(grep '<key id=' "${input_file}" | sed "s/.*\(${JIRA_MIGRATION_JIRA_PROJECT_NAME}-[0-9][0-9]*\).*/\1/")
@@ -103,6 +106,7 @@ tmp=$(mktemp)
 sed 's/#\([0-9][0-9]*\)/#\xE2\x80\x8B\1/g' "${remotelinks_file}" > "$tmp"
 mv "$tmp" "${remotelinks_file}"
 
+cat "${watchers_file}" | sed 's/^[A-Z0-9-]*:[^:]*://' | sed 's/\([^:]*\):\(.*\)/\2 <\1>/' | sort -u > "${unique_watchers_file}"
 
-echo -e "\nDone. Output written to ${watchers_file} & ${remotelinks_file}" >&2
+echo -e "\nDone. Output written to ${watchers_file}, ${unique_watchers_file} and ${remotelinks_file}" >&2
 rm -f "${progress_file}"
