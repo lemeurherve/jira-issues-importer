@@ -417,7 +417,34 @@ class Project:
         except AttributeError:
             pass
 
+    def _rewrite_attachment_urls(self, html, attachment_map):
+        if not self.hosted_artifact_base:
+            return html  # nothing to rewrite
+
+        # Pattern to match attachment or thumbnail URLs
+        pattern = re.compile(
+            rf'{self.jiraBaseUrl}/secure/(?:attachment|thumbnail)/(\d+)/(?:[^"]+)',
+            re.IGNORECASE
+        )
+
+        def repl(m):
+            attachment_id = m.group(1)
+            filename = attachment_map.get(attachment_id)
+            if not filename:
+                return m.group(0)
+            if attachment_id not in self.jira_attachments:
+                return m.group(0)
+            return 'https://raw.githubusercontent.com/' + quote(self.jira_attachments[attachment_id])
+
+        return pattern.sub(repl, html)
+
     def _add_comments(self, item):
+        attachment_map = {}
+        try:
+            for att in item.attachments.attachment:
+                attachment_map[att.get('id')] = att.get('name')
+        except AttributeError:
+            pass
         try:
             for comment in item.comments.comment:
                 comment_id = comment.get('id')
@@ -427,8 +454,9 @@ class Project:
                 comment_raw_details = ''
                 comment_text = ''
                 if comment.text is not None:
-                    comment_text = self._clean_html(comment.text)
-                    comment_raw = comment.text.replace('<br/>', '')
+                    raw_html = comment.text
+                    comment_text = self._clean_html(self._rewrite_attachment_urls(raw_html, attachment_map))
+                    comment_raw = raw_html.replace('<br/>', '')
                     if len(comment_raw_details) < 65000:
                         comment_raw_details = (
                             f'<li><details><summary><i>Raw content of original comment:</i></summary>\n\n'
