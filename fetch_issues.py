@@ -49,3 +49,9 @@ while pager < total_results:
     pager += max_results
 
 print('Complete')
+
+print(
+    '\n\n'
+    'Before running main.py, you should execute ./concatenate-xml-results.sh script\n'
+    'then ./retrieve-watchers-and-remotelinks.sh (or ./retrieve-remotelinks.sh if you don\'t have permissions to see watchers)\n'
+)
