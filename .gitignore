@@ -99,6 +99,9 @@ TODO.md
 issue_jira_github_mapping.json
 issue_comment_on*
 jira-comments.txt
-# Store proper usernames for JIRAUSER* accounts
+# Proper JIRAUSER usernames mapping
 jira_fixed_usernames.txt
+# Avatars mapping
 jira_username_avatar_mapping.txt
+# Attachments mapping
+jira_attachments_repo_id_filename.txt
