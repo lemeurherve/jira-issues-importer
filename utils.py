@@ -1,6 +1,8 @@
 from lxml import objectify
 import os
 import glob
+import requests
+
 from collections import defaultdict
 
 def fetch_labels_mapping():
@@ -28,23 +30,66 @@ def fetch_remote_links():
 
     return dict(groups)
 
-# Ex of line: JIRAUSER134221:hlemeur
-def fetch_jira_fixed_usernames(filename):
-    with open(filename) as file:
-        entry = [line.split(":") for line in file.readlines()]
-    return {key.strip(): value.strip() for key, value in entry}
+def fetch_hosted_mappings(project):
+    """
+    Downloads the Jira mapping files and updates the project instance.
+    """
 
-# Ex of line: hlemeur:avatars/hlemeur.png
-def fetch_jira_user_avatars(filename):
-    with open(filename) as file:
-        entry = [line.split(":") for line in file.readlines()]
-    return {key.strip(): value.strip() for key, value in entry}
+    mapping_folder = os.path.abspath('./' + project.mapping_foldername)
+    if os.path.exists(mapping_folder):
+        reply = input("Start with fresh mapping files? [Y/n]: ").strip().lower()
+        fresh = (reply != "n")
+    else:
+        os.makedirs(mapping_folder)
 
-# Ex of line: 64966:jenkinsci/attachments-from-jira-issues-core-cli/refs/heads/main/attachments/64966/jenkins-build3.log
-def fetch_jira_attachments(filename):
-    with open(filename) as file:
-        entry = [line.split(":") for line in file.readlines()]
-    return {key.strip(): value.strip() for key, value in entry}
+    # Ex of line: JIRAUSER134221:hlemeur
+    project.jira_fixed_usernames = _download_mapping(project.hosted_artifact_base, mapping_folder, project.jira_fixed_username_filename, fresh)
+    # Ex of line: hlemeur:avatars/hlemeur.png
+    project.jira_user_avatars = _download_mapping(project.hosted_artifact_base, mapping_folder, project.jira_username_avatar_mapping_filename, fresh)
+    # Ex of line: 64966:jenkinsci/attachments-from-jira-issues-core-cli/refs/heads/main/attachments/64966/jenkins-build3.log
+    project.jira_attachments = _download_mapping(project.hosted_artifact_base, mapping_folder, project.jira_attachments_filename, fresh)
+
+    return project
+
+def _download_mapping(mapping_base_url, mapping_folder, mapping_filename, force = False):
+    """
+    Downloads one mapping file if necessary and returns a parsed dict.
+    """
+
+    folder_name = os.path.basename(mapping_folder)
+
+    url = f'{mapping_base_url}/{folder_name}/{mapping_filename}'
+    dest = os.path.join(mapping_folder, mapping_filename)
+
+    if force and os.path.exists(dest):
+        print(f'- Deleting existing {dest}')
+        os.remove(dest)
+
+    if not os.path.exists(dest):
+        print(f'- Downloading: {url}')
+        r = requests.get(url)
+        r.raise_for_status()
+        with open(dest, "wb") as f:
+            f.write(r.content)
+    else:
+        print(f'- Using cached mapping: {dest}')
+
+    return _parse_mapping(dest)
+
+def _parse_mapping(path):
+    mapping = {}
+
+    if not os.path.exists(path):
+        return mapping
+
+    with open(path) as f:
+        for line in f:
+            if ":" not in line:
+                continue
+            key, value = line.split(":", 1)
+            mapping[key.strip()] = value.strip()
+
+    return mapping
 
 def _map_label(label, labels_mapping):
     if label in labels_mapping:
