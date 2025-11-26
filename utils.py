@@ -36,6 +36,7 @@ def fetch_hosted_mappings(project):
     """
 
     mapping_folder = os.path.abspath('./' + project.mapping_foldername)
+    fresh = True
     if os.path.exists(mapping_folder):
         reply = input("Start with fresh mapping files? [Y/n]: ").strip().lower()
         fresh = (reply != "n")
