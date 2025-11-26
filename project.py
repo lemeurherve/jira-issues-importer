@@ -35,7 +35,17 @@ class Project:
         # "org/repo" hosting artifacts like avatars, attachments and username mappings
         # If not set, will use local files, and won't add avatar in issues or comments
         # Example of such repo: https://github.com/lemeurherve/artifacts-from-jira-issues-example
-        self.hosted_artifact_base = None
+        reply = input("Start with fresh mapping files? (will delete existing mapping files present locally) [Y/n]: ").strip().lower()
+        if reply not in ("n", "no"):
+            if os.path.exists(self.jira_fixed_username_file):
+                os.remove(self.jira_fixed_username_file)
+                print(f'{self.jira_fixed_username_file} deleted')
+            if os.path.exists(self.jira_username_avatar_mapping_file):
+                os.remove(self.jira_username_avatar_mapping_file)
+                print(f'{self.jira_username_avatar_mapping_file} deleted')
+            if os.path.exists(self.jira_attachments_file):
+                os.remove(self.jira_attachments_file)
+                print(f'{self.jira_attachments_file} deleted')
         if not os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
             print('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO is not set: no mapping files will be retrieved, no avatar will be rattached to issues or comments, and attachment links won\'t be replaced')
         else:
