@@ -7,36 +7,44 @@ import re
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
 
+class FakeResponse:
+    def __init__(self, data):
+        self._data = data
+        self.status_code = 202
+        self.headers = {}
+
+    def json(self):
+        return self._data
+
 class Importer:
     _GITHUB_ISSUE_PREFIX = "INFRA-"
     _PLACEHOLDER_PREFIX = "@PSTART"
     _PLACEHOLDER_SUFFIX = "@PEND"
     _DEFAULT_TIME_OUT = 120.0
 
-    def __init__(self, options, project):
-        self.options = options
+    def __init__(self, project):
         self.project = project
-        self.github_url = 'https://api.github.com/repos/%s/%s' % (
-            self.options.account, self.options.repo)
+        self.github_api_url = f'https://api.github.com/repos/{self.project.config.github_account}/{self.project.config.github_repo}'
         self.jira_issue_replace_patterns = {
             'https://issues.jenkins.io/browse/%s%s' % (self.project.name, r'-(\d+)'): r'\1',
             self.project.name + r'-(\d+)': Importer._GITHUB_ISSUE_PREFIX + r'\1',
             r'Issue (\d+)': Importer._GITHUB_ISSUE_PREFIX + r'\1'}
         self.headers = {
             'Accept': 'application/vnd.github.golden-comet-preview+json',
-            'Authorization': f'token {options.accesstoken}'
+            'Authorization': f'token {self.project.config.github_pat}'
         }
-
-        self.labels_mapping = fetch_labels_mapping()
-        self.approved_labels = fetch_allowed_labels()
+        self._dry_run_issue_counter = -1
 
     def import_milestones(self):
         """
         Imports the gathered project milestones into GitHub and remembers the created milestone ids
         """
-        milestone_url = self.github_url + '/milestones'
+        milestone_url = self.github_api_url + '/milestones'
         print('Importing milestones...', milestone_url)
         print
+
+        if self.project.config.dry_run:
+            print('Dry-run: no milestone import to GitHub')
 
         # Check existing first
         existing = list()
@@ -86,22 +94,25 @@ class Importer:
                 continue
 
             data = {'title': mkey}
-            r = requests.post(milestone_url, json=data, headers=self.headers,
-                timeout=Importer._DEFAULT_TIME_OUT)
+            if not self.project.config.dry_run:
+                r = requests.post(milestone_url, json=data, headers=self.headers, timeout=Importer._DEFAULT_TIME_OUT)
 
-            # overwrite histogram data with the actual milestone id now
-            if r.status_code == 201:
-                content = r.json()
-                self.project.get_milestones()[mkey] = content['number']
-                print(mkey)
+                # overwrite histogram data with the actual milestone id now
+                if r.status_code == 201:
+                    content = r.json()
+                    self.project.get_milestones()[mkey] = content['number']
+                    print(mkey)
 
     def import_labels(self, colour_selector):
         """
         Imports the gathered project components and labels as labels into GitHub 
         """
-        label_url = self.github_url + '/labels'
+        label_url = self.github_api_url + '/labels'
         print('Importing labels...', label_url)
         print()
+
+        if self.project.config.dry_run:
+            print('Dry-run: no label import to GitHub')
 
         for lkey in self.project.get_all_labels().keys():
 
@@ -111,14 +122,16 @@ class Importer:
                 if lkey in self.project.get_components().keys():
                     prefixed_lkey = 'jira-component:' + prefixed_lkey
 
-            prefixed_lkey = convert_label(prefixed_lkey, self.labels_mapping, self.approved_labels)
+            prefixed_lkey = convert_label(prefixed_lkey, self.project.labels_mapping, self.project.approved_labels)
             if prefixed_lkey is None:
                 continue
 
             data = {'name': prefixed_lkey,
                     'color': colour_selector.get_colour(lkey)}
-            r = requests.post(label_url, json=data, headers=self.headers, timeout=Importer._DEFAULT_TIME_OUT)
-            if r.status_code == 201:
+                    
+            if not self.project.config.dry_run:
+                r = requests.post(label_url, json=data, headers=self.headers, timeout=Importer._DEFAULT_TIME_OUT)
+            if r.status_code == 201 or self.project.config.dry_run:
                 print(lkey + '->' + prefixed_lkey)
             else:
                 print('Failure importing label ' + prefixed_lkey,
@@ -160,6 +173,9 @@ class Importer:
         references to JIRA issues in comments are replaced with a placeholder    
         """
         print('Importing issues...')
+
+        if self.project.config.dry_run:
+            print('Dry-run: no issue import to GitHub')
 
         count = 0
         issue_mappings = []
@@ -281,12 +297,16 @@ class Importer:
         """
         Uploads a single issue to GitHub asynchronously with the Issue Import API.
         """
-        issue_url = self.github_url + '/import/issues'
+        issue_url = self.github_api_url + '/import/issues'
         # Delete keys starting with "_", only there for data gathering, not for issue upload
         for key in list(issue):
             if key.startswith('_'):
                 issue.pop(key)
         issue_data = {'issue': issue, 'comments': comments}
+
+        if self.project.config.dry_run:
+            return FakeResponse({'url': 'dry_run'})
+
         response = requests.post(issue_url, json=issue_data, headers=self.headers, 
             timeout=Importer._DEFAULT_TIME_OUT)
         if response.status_code == 202:
@@ -308,6 +328,11 @@ class Importer:
         If the status is 'pending', it sleeps, then rechecks until the status is
         either 'imported' or 'failed'.
         """
+        if self.project.config.dry_run:
+            fake_id = self._dry_run_issue_counter
+            self._dry_run_issue_counter += -1
+            return FakeResponse({'issue_url': f'dry_run/{fake_id}'})
+
         while True:  # keep checking until status is something other than 'pending'
             time.sleep(3)
             response = requests.get(status_url, headers=self.headers, 
@@ -355,7 +380,7 @@ class Importer:
                 f'<!-- [synthetic_comment=relationship] -->\n'
                 f'<!-- [jira_relationship_key={jira_key}] -->'
                 f'<!-- [jira_relationship_type={relationship_type}] -->\n'
-                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.options.account}/{self.options.repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
+                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.project.config.github_account}/{self.project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
             )
 
         for jira_key in duplicates:
@@ -403,7 +428,7 @@ class Importer:
     #     """
     #     Starts post-processing all issue comments.
     #     """
-    #     comment_url = self.github_url + '/issues/comments'
+    #     comment_url = self.github_api_url + '/issues/comments'
     #     self._post_process_comments(comment_url)
 
     # def _post_process_comments(self, url):

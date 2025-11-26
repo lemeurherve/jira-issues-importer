@@ -10,7 +10,7 @@ class Config:
         return f"Config({self.__dict__})"
 
 def ask_dry_mode():
-    reply = input("Dry-run? (nothing created in GitHub) [Y/n]: ").strip().lower()
+    reply = input("\n\nDry-run? (nothing created in GitHub) [Y/n]: ").strip().lower()
     return (reply != "n")
 
 def load_config(specs):
