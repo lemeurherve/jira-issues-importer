@@ -9,73 +9,53 @@ import time
 
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_jira_fixed_usernames, fetch_jira_user_avatars, fetch_jira_attachments, fetch_remote_links, convert_label, proper_label_str
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_hosted_mappings, fetch_remote_links, convert_label, proper_label_str
 
 from version import __version__
 
 class Project:
 
-    def __init__(self, name, doneStatusCategoryId, jiraBaseUrl):
-        self.name = name
+    def __init__(self, config):
+        self.config = config
+        self.version = config.version
+        self.name = config.name
         self.current_datedime = datetime.today().strftime('%Y-%m-%d')
-        self.doneStatusCategoryId = doneStatusCategoryId
-        self.jiraBaseUrl = jiraBaseUrl
-        self._project = {'Milestones': defaultdict(int), 'Components': defaultdict(
-            int), 'Labels': defaultdict(int), 'Types': defaultdict(int), 'Issues': []}
+        self.doneStatusCategoryId = config.jira_done_id
+        self.jiraBaseUrl = config.jira_base_url
+        self._project = {
+            'Milestones': defaultdict(int),
+            'Components': defaultdict(int),
+            'Labels': defaultdict(int),
+            'Types': defaultdict(int),
+            'Issues': []
+        }
 
         self.labels_mapping = fetch_labels_mapping()
         self.approved_labels = fetch_allowed_labels()
         self.remote_links = fetch_remote_links()
 
-        self.jira_fixed_username_file = 'jira_fixed_usernames.txt'
-        self.jira_username_avatar_mapping_file = 'jira_username_avatar_mapping.txt'
-        self.jira_attachments_file = 'jira_attachments_repo_id_filename.txt'
-        self.jira_user_avatars = []
-        self.jira_attachments = []
-        # "org/repo" hosting artifacts like avatars, attachments and username mappings
-        # If not set, will use local files, and won't add avatar in issues or comments
-        # Example of such repo: https://github.com/lemeurherve/artifacts-from-jira-issues-example
         self.hosted_artifact_base = None
-        if not os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO'):
-            print('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO is not set: no mapping files will be retrieved, no avatar will be rattached to issues or comments, and attachment links won\'t be replaced')
-        else:
-            self.hosted_artifact_base = 'https://raw.githubusercontent.com/' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + '/refs/heads/main'
+        if config.hosted_artifact_org_repo:
+            self.hosted_artifact_base = f'https://raw.githubusercontent.com/{config.hosted_artifact_org_repo}/refs/heads/main'
 
-            # Download mappings from hosted artifacts repo for further inspection post import
-            print('\nDownloading mappings from ' + os.getenv('JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO') + ' if they don\'t already exist')
-            if os.path.exists(self.jira_fixed_username_file):
-                print(f'- {self.jira_fixed_username_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_fixed_username_file))})')
-            else:
-                response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_fixed_username_file)
-                open(self.jira_fixed_username_file, 'w').write(response.text)
-                print(f'- {self.jira_fixed_username_file} downloaded')
+        # Must be the same as the one in the hosted_artifact_org_repo
+        self.mapping_foldername = 'mappings'
 
-            if os.path.exists(self.jira_username_avatar_mapping_file):
-                print(f'- {self.jira_username_avatar_mapping_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_username_avatar_mapping_file))})')
-            else:
-                response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_username_avatar_mapping_file)
-                open(self.jira_username_avatar_mapping_file, 'w').write(response.text)
-                print(f'- {self.jira_username_avatar_mapping_file} downloaded')
+        # Keeping those filenames here so we can complete them during the import
+        self.jira_fixed_username_filename = 'jira_fixed_usernames.txt'
+        self.jira_username_avatar_mapping_filename = 'jira_username_avatar_mapping.txt'
+        self.jira_attachments_filename = 'jira_attachments_repo_id_filename.txt'
 
-            if os.path.exists(self.jira_attachments_file):
-                print(f'- {self.jira_attachments_file} already exits (last modified: {time.ctime(os.path.getmtime(self.jira_attachments_file))})')
-            else:
-                response = requests.get(self.hosted_artifact_base + '/mappings/' + self.jira_attachments_file)
-                open(self.jira_attachments_file, 'w').write(response.text)
-                print(f'- {self.jira_attachments_file} downloaded')
+        # Fields that utils will populate
+        self.jira_fixed_usernames = {}
+        self.jira_user_avatars = {}
+        self.jira_attachments = {}
 
-            print()
-
-            # As avatars can only be displayed if they're hosted, load its mapping only in that case
-            self.jira_user_avatars = fetch_jira_user_avatars(self.jira_username_avatar_mapping_file)
-
-            # As attachment links can only be replaced if they're hosted, load its mapping only in that case
-            self.jira_attachments = fetch_jira_attachments(self.jira_attachments_file)
-
-        # load proper usernames mapping from file (from local file, eventually downloaded above)
-        self.jira_fixed_usernames = fetch_jira_fixed_usernames(self.jira_fixed_username_file)
-
-        self.version = __version__
+    def load_mappings(self):
+        """
+        Delegate the fetching logic to utils.
+        """
+        return fetch_hosted_mappings(self)
 
     def get_milestones(self):
         return self._project['Milestones']
@@ -158,6 +138,7 @@ class Project:
 
         # retrieve jira components and labels as github labels (add 'imported-jira-issue' label by default)
         labels = ['imported-jira-issue']
+        print(item)
         for component in item.component:
             if os.getenv('JIRA_MIGRATION_INCLUDE_COMPONENT_IN_LABELS', 'true') == 'true':
                 labels.append('component:' + proper_label_str(component.text[:40]))
