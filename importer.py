@@ -244,7 +244,7 @@ class Importer:
                 mapping['jira_links_in_comments_imported'] = list(set(mapping['jira_links_in_comments_imported']))
 
         # Save collected data to JSON after all issues are imported
-        json_mapping = f'{self.project.current_datedime}_jira-to-github-mapping.json'
+        json_mapping = f'jira-to-github-mapping_{self.project.current_datedime}.json'
         with open(json_mapping, 'w', encoding='utf-8') as f:
             json.dump(issue_mappings, f, indent=2, ensure_ascii=False)
         print(json_mapping + ' saved.')
@@ -273,7 +273,7 @@ class Importer:
         issue['jira_issue_key'] = jira_key
 
         jira_gh = f"{jira_key}:{gh_issue_id}\n"
-        txt_mapping = f'{self.project.current_datedime}_jira-keys-to-github-id.txt'
+        txt_mapping = f'jira-keys-to-github-id_{self.project.current_datedime}.txt'
         with open(txt_mapping, 'a') as f:
             f.write(jira_gh)
 
