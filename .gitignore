@@ -93,15 +93,12 @@ ENV/
 
 labels_mapping.txt
 allowed_labels.txt
-jira-keys-to-github-id.txt
+jira-keys-to-github-id*.txt
 
 TODO.md
-issue_jira_github_mapping.json
+issue_jira_github_mapping*.json
 issue_comment_on*
 jira-comments.txt
-# Proper JIRAUSER usernames mapping
-jira_fixed_usernames.txt
-# Avatars mapping
-jira_username_avatar_mapping.txt
-# Attachments mapping
-jira_attachments_repo_id_filename.txt
+
+# Mappings
+mappings/
