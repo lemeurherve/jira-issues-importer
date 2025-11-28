@@ -25,6 +25,7 @@ class Importer:
     def __init__(self, project):
         self.project = project
         self.jira_to_github_txt_mapping = f'jira-keys-to-github-id_{self.project.current_datedime}.txt'
+        self.jira_to_complete_github_txt_mapping = f'jira-keys-to-github-id-for-external-use_{self.project.current_datedime}.txt'
         self.github_api_url = f'https://api.github.com/repos/{self.project.config.github_account}/{self.project.config.github_repo}'
         self.jira_issue_replace_patterns = {
             'https://issues.jenkins.io/browse/%s%s' % (self.project.name, r'-(\d+)'): r'\1',
@@ -290,9 +291,12 @@ class Importer:
         issue['github_issue_id'] = gh_issue_id
         issue['jira_issue_key'] = jira_key
 
-        jira_gh = f"{jira_key}:{self.project.config.github_account}/{self.project.config.github_repo}#{gh_issue_id}\n"
+        jira_gh = f"{jira_key}:{gh_issue_id}\n"
+        jira_complete_gh = f"{jira_key}:{self.project.config.github_account}/{self.project.config.github_repo}#{gh_issue_id}\n"
         with open(self.jira_to_github_txt_mapping, 'a') as f:
             f.write(jira_gh)
+        with open(self.jira_to_complete_github_txt_mapping, 'a') as f:
+            f.write(jira_complete_gh)
 
     def upload_github_issue(self, issue, comments):
         """
