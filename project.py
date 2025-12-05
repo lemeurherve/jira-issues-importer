@@ -8,7 +8,7 @@ import time
 
 from urllib.parse import quote
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_hosted_mappings, fetch_remote_links, convert_label, proper_label_str, replace_jira_urls_with_redirection_service
+from utils import fetch_labels_mapping, fetch_allowed_labels, fetch_hosted_mappings, fetch_remote_links, convert_label, proper_label_str, replace_jira_urls_with_redirection_service, replace_plain_jira_keys_with_links
 
 from version import __version__
 
@@ -153,6 +153,10 @@ class Project:
 
         body = self._clean_html(item.description.text)
 
+        # Apply Jira URL rewriting to the entire body
+        body = replace_jira_urls_with_redirection_service(self, body)
+        body = replace_plain_jira_keys_with_links(self, body)
+
         ## imported issue details block
         # metadata: original author & link
         reporter_fullname = item.reporter.text
@@ -293,9 +297,6 @@ class Project:
 
         # Put hidden refs on top of body
         body = hidden_refs + '\n\n' + body
-
-        # Apply Jira URL rewriting to the entire body (including metadata sections)
-        body = replace_jira_urls_with_redirection_service(self, body)
 
         # _ keys are only there for gathering import data
         self._project['Issues'].append({'title': item.title.text,
@@ -445,6 +446,10 @@ class Project:
                 if comment.text is not None:
                     raw_html = comment.text
                     comment_text = self._clean_html(self._rewrite_attachment_urls(raw_html, attachment_map))
+                    # Apply Jira URL rewriting to the entire comment body
+                    comment_text = replace_jira_urls_with_redirection_service(self, comment_text)
+                    comment_text = replace_plain_jira_keys_with_links(self, comment_text)
+
                     comment_raw = raw_html.replace('<br/>', '')
                     if len(comment_raw_details) < 65000:
                         comment_raw_details = (
@@ -471,9 +476,6 @@ class Project:
                     f'<!-- [jira_comment_id={comment_id}] -->\n'
                     f'<!-- [comment_author={comment_username}] -->\n'
                 ) + comment_body
-
-                # Apply Jira URL rewriting to the entire comment body (including metadata sections)
-                comment_body = replace_jira_urls_with_redirection_service(self, comment_body)
 
                 self._project['Issues'][-1]['comments'].append({
                     "created_at": self._convert_to_iso(comment.get('created')),
