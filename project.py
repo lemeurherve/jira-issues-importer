@@ -438,6 +438,7 @@ class Project:
                 comment_username = self._proper_jirauser_username(comment.get('author'))
                 comment_author = self._username_and_avatar(comment_username, 'for_comment')
                 a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
+                a_comment_link_original = f'<a class="original-jira-comment-link" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
                 comment_raw_details = ''
                 comment_text = ''
                 if comment.text is not None:
@@ -455,7 +456,8 @@ class Project:
                 comment_body = (
                     f'<details><summary><i>{comment_author}:</i></summary>\n\n'
                     f'<ul>\n'
-                    f'<li><i>Original {a_comment_link}comment link</a></i>\n'
+                    f'<li><i>{a_comment_link}Comment link</a></i>\n'
+                    f'<li><i>Original {a_comment_link_original}comment link</a> (no redirect)</i>\n'
                     f'{comment_raw_details}\n'
                     f'</ul>\n'
                     f'</details>\n\n'
@@ -537,6 +539,71 @@ class Project:
         return re.sub('&(%s);' % '|'.join(name2codepoint),
                       lambda m: chr(name2codepoint[m.group(1)]), s)
 
+    def _replace_jira_urls_with_redirection_service(self, s):
+        """
+        Replace Jira browse URLs with redirection service URLs if configured.
+        Preserves query strings from the original URLs.
+        Excludes links marked with 'original-jira-comment-link' class.
+
+        Example: https://issues.jenkins.io/browse/INFRA-123?focusedId=456
+                 -> https://issue-redirect.jenkins.io/issue/INFRA/123?focusedId=456
+        """
+        if s is None or not self.config.redirection_service:
+            return s if s is not None else ''
+
+        # Pattern to match any Jira browse URL (with or without https://)
+        # Uses negative lookbehind to exclude 'original-jira-comment-link' class links
+        # Multiple lookbehinds handle cases with/without protocol in the href attribute
+        pattern = (
+            rf'(?<!<a class="original-jira-comment-link" href=")'
+            rf'(?<!<a class="original-jira-comment-link" href="https://)'
+            rf'(?<!<a class="original-jira-comment-link" href="http://)'
+            rf'(?:https?://)?issues\.jenkins\.io/browse/{self.name}-(\d+)(\?[^\s<>"]*)?'
+        )
+
+        # Nice to have: allow the redirection service URL to be configured per project, by using the project name (ex: "JENKINS" or "INFRA") instead of "/issue/" in https://issue-redirect.jenkins.io/
+
+        # Replace with redirection service URL + issue number + query string (if present)
+        issue_number_and_query = r'\1\2'
+        replacement = f'{self.config.redirection_service}/{self.name}/{issue_number_and_query}'
+
+        return re.sub(pattern, replacement, s)
+
+    def _replace_plain_jira_keys_with_links(self, s):
+        """
+        Replace plain text issue key references with markdown links.
+
+        Example: Plain text "INFRA-123" -> [INFRA-123](https://issue-redirect.jenkins.io/issue/INFRA/123)
+
+        Excludes keys that are:
+        - Already part of a URL
+        - Already in a markdown or HTML link
+        """
+        if s is None or not self.config.redirection_service:
+            return s if s is not None else ''
+
+        # Pattern to match plain text issue key references
+        # Excludes keys already part of URLs or links
+        plain_key_pattern = (
+            rf'(?<!browse/)'  # Not after browse/
+            rf'(?<!href=")'  # Not after href="
+            rf'(?<!\[)'  # Not after [
+            rf'(?<!\()'  # Not after (
+            rf'(?<!>)'  # Not after > (inside HTML tags)
+            rf'\b({self.name}-(\d+))\b'  # Match whole word PROJECT-NUMBER
+            rf'(?!\])'  # Not before ]
+            rf'(?!\))'  # Not before )
+            rf'(?!<)'  # Not before < (before HTML tags)
+        )
+
+        def replace_plain_key(match):
+            full_key = match.group(1)
+            issue_number = match.group(2)
+            link_url = f'{self.config.redirection_service}/{self.name}/{issue_number}'
+            return f'[{full_key}]({link_url})'
+
+        return re.sub(plain_key_pattern, replace_plain_key, s)
+
     def _clean_html(self, s):
         if s is None:
             return ''
@@ -553,6 +620,13 @@ class Project:
 
         # Escape @mentions to prevent unwanted mentions in GitHub
         s = re.sub(r'@([A-Za-z0-9._-]+)', '@\u200B\\1', s)
+
+        # Replace Jira URLs with redirection service URLs
+        s = self._replace_jira_urls_with_redirection_service(s)
+
+        # Replace plain text issue key references with markdown links
+        s = self._replace_plain_jira_keys_with_links(s)
+
         return s
 
     def _proper_jirauser_username(self, name):

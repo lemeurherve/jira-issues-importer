@@ -16,7 +16,8 @@ config = load_config([
     ("github_account", "JIRA_MIGRATION_GITHUB_NAME", "GitHub account name (user/org)", "jenkins-infra"),
     ("github_repo", "JIRA_MIGRATION_GITHUB_REPO", "GitHub repository name", "helpdesk"),
     ("github_pat", "JIRA_MIGRATION_GITHUB_ACCESS_TOKEN", "GitHub Personal Access Token", None),
-    ("hosted_artifact_org_repo", "JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO", "Hosted artifacts org/repo", None),
+    ("hosted_artifact_org_repo", "JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO", "Hosted artifacts org/repo (ex: 'jenkinsci/artifacts-from-jira-issues')", None),
+    ("redirection_service", "JIRA_MIGRATION_REDIRECTION_SERVICE", "URL of the redirection service (keep empty if none), ex: 'https://issue-redirect.jenkins.io'", None),
 ])
 
 print(f"Jira Migration Tool - version {config.version}")
