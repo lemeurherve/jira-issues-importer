@@ -547,7 +547,7 @@ class Project:
         Excludes links marked with 'original-jira-comment-link' class.
 
         Example: https://issues.jenkins.io/browse/INFRA-123?focusedId=456
-                 -> https://issue-redirect.jenkins.io/issue/INFRA/123?focusedId=456
+                 -> https://issue-redirect.jenkins.io/issue/123?focusedId=456
         """
         if s is None or not self.config.redirection_service:
             return s if s is not None else ''
@@ -555,11 +555,13 @@ class Project:
         # Pattern to match any Jira browse URL (with or without https://)
         # Uses negative lookbehind to exclude 'original-jira-link' class links
         # Multiple lookbehinds handle cases with/without protocol in the href attribute
+        escaped_jira_base_url = self.jiraBaseUrl.replace('.', '\.')
         pattern = (
             rf'(?<!<a class="original-jira-link" href=")'
             rf'(?<!<a class="original-jira-link" href="https://)'
             rf'(?<!<a class="original-jira-link" href="http://)'
-            rf'(?:https?://)?issues\.jenkins\.io/browse/{self.name}-(\d+)(\?[^\s<>"]*)?'
+            # TODO: use escape
+            rf'(?:https?://)?{escaped_jira_base_url}/browse/{self.name}-(\d+)(\?[^\s<>"]*)?'
         )
 
         # Replace with redirection service URL + issue number + query string (if present)
@@ -569,6 +571,48 @@ class Project:
         replacement = f'{self.config.redirection_service}/issue/{issue_number_and_query}'
 
         return re.sub(pattern, replacement, s)
+
+    def _replace_plain_jira_keys_with_links(self, s):
+        """
+        Replace plain text issue key references with markdown links.
+
+        Use redirection service if set.
+
+        Example: Plain text "INFRA-123" -> [INFRA-123](https://issue-redirect.jenkins.io/issue/123)
+
+        Excludes keys that are:
+        - Already part of a URL
+        - Already in a markdown or HTML link
+        """
+        if s is None or not self.config.redirection_service:
+            return s if s is not None else ''
+
+        # Pattern to match plain text issue key references
+        # Excludes keys already part of URLs or links
+        plain_key_pattern = (
+            rf'(?<!browse/)'  # Not after browse/
+            rf'(?<!href=")'  # Not after href="
+            rf'(?<!\[)'  # Not after [
+            rf'(?<!\()'  # Not after (
+            rf'(?<!>)'  # Not after > (inside HTML tags)
+            rf'\b({self.name}-(\d+))\b'  # Match whole word PROJECT-NUMBER
+            rf'(?!\])'  # Not before ]
+            rf'(?!\))'  # Not before )
+            rf'(?!<)'  # Not before < (before HTML tags)
+        )
+
+        def replace_plain_key(match):
+            full_key = match.group(1)
+            issue_number = match.group(2)
+            if self.config.redirection_service:
+                # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
+                # link_url = f'{self.config.redirection_service}/{self.name}/{issue_number}'
+                link_url = f'{self.config.redirection_service}/issue/{issue_number}'
+            else:
+                link_url = f'{self.jiraBaseUrl}/browse/{full_key}'
+            return f'[{full_key}]({link_url})'
+
+        return re.sub(plain_key_pattern, replace_plain_key, s)
 
     def _clean_html(self, s):
         if s is None:
@@ -589,6 +633,9 @@ class Project:
 
         # Replace Jira URLs with redirection service URLs
         s = self._replace_jira_urls_with_redirection_service(s)
+
+        # Replace plain text issue key references with markdown links
+        s = self._replace_plain_jira_keys_with_links(s)
 
         return s
 
