@@ -10,6 +10,14 @@ from datetime import datetime
 from html import escape
 import re
 
+try:
+    import cmarkgfm
+    CMARKGFM_AVAILABLE = True
+except ImportError:
+    CMARKGFM_AVAILABLE = False
+    print("Warning: cmarkgfm not available. Install with: pip install cmarkgfm")
+    print("Falling back to basic markdown rendering.")
+
 
 class GitHubHTMLGenerator:
     """Generates HTML files that mimic GitHub's issue interface."""
@@ -64,30 +72,59 @@ class GitHubHTMLGenerator:
 
     @staticmethod
     def _render_markdown_to_html(md_text):
-        """Render content to HTML. Handles both HTML and markdown input.
+        """Render content to HTML using GitHub Flavored Markdown.
+
+        Handles both HTML and markdown input. Uses cmarkgfm (GitHub's cmark fork)
+        for accurate GFM rendering including:
+        - Fenced code blocks with syntax highlighting
+        - Tables
+        - Strikethrough
+        - Autolinks
+        - Task lists
+        - And all other GFM features
+
         Content is returned without wrapping - wrapping with markdown-body class
-        is done by the caller."""
+        is done by the caller.
+        """
         if not md_text:
             return '<p><em>No description provided</em></p>'
 
-        # Check if content is already HTML (contains HTML tags)
-        has_html_tags = bool(re.search(r'<[a-zA-Z][^>]*>', md_text))
+        # Check if content is already HTML (contains HTML tags that aren't markdown)
+        # Be more conservative - only treat as HTML if it has block-level HTML
+        has_block_html = bool(re.search(r'<(?:div|p|ul|ol|li|details|summary|pre|blockquote|h[1-6])[>\s]', md_text))
 
-        if has_html_tags:
+        if has_block_html:
             # Content is already HTML, return as-is
             return md_text
 
-        # Content is markdown, convert it
+        # Use cmarkgfm for proper GitHub Flavored Markdown rendering
+        if CMARKGFM_AVAILABLE:
+            try:
+                # Use GitHub Flavored Markdown rendering
+                # This handles all GFM features: code blocks, tables, strikethrough, etc.
+                html = cmarkgfm.github_flavored_markdown_to_html(md_text)
+                return html
+            except Exception as e:
+                print(f"Warning: cmarkgfm rendering failed: {e}. Falling back to basic rendering.")
+                # Fall through to basic rendering
+
+        # Fallback: Basic markdown conversion (if cmarkgfm not available)
         html = escape(md_text)
 
         # Convert markdown links
         html = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2">\1</a>', html)
+
+        # Convert images
+        html = re.sub(r'!\[([^\]]*)\]\(([^\)]+)\)', r'<img src="\2" alt="\1">', html)
 
         # Convert bold
         html = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', html)
 
         # Convert italic
         html = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', html)
+
+        # Convert strikethrough
+        html = re.sub(r'~~([^~]+)~~', r'<del>\1</del>', html)
 
         # Convert code blocks
         html = re.sub(r'```([^`]+)```', r'<pre><code>\1</code></pre>', html)
@@ -274,131 +311,9 @@ class GitHubHTMLGenerator:
             border-radius: 6px;
         }}
 
+        /* markdown-body class from github-markdown.css handles all content styling */
         .issue-body {{
             padding: 16px;
-        }}
-
-        .issue-body p {{
-            margin-bottom: 16px;
-        }}
-
-        .issue-body p:last-child {{
-            margin-bottom: 0;
-        }}
-
-        .issue-body code {{
-            padding: 0.2em 0.4em;
-            background-color: {c['bg_tertiary']};
-            border-radius: 3px;
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-            font-size: 85%;
-        }}
-
-        .issue-body pre {{
-            padding: 16px;
-            background-color: {c['bg_tertiary']};
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 16px 0;
-        }}
-
-        .issue-body pre code {{
-            padding: 0;
-            background-color: transparent;
-        }}
-
-        .issue-body a {{
-            color: {c['link']};
-            text-decoration: none;
-        }}
-
-        .issue-body a:hover {{
-            color: {c['link_hover']};
-            text-decoration: underline;
-        }}
-
-        /* Styles for HTML content from Jira */
-        .content-html {{
-            line-height: 1.6;
-        }}
-
-        .content-html details {{
-            margin: 16px 0;
-            padding: 16px;
-            background-color: {c['bg_secondary']};
-            border: 1px solid {c['border']};
-            border-radius: 6px;
-        }}
-
-        .content-html summary {{
-            cursor: pointer;
-            font-weight: 600;
-            margin-bottom: 8px;
-            user-select: none;
-        }}
-
-        .content-html summary:hover {{
-            color: {c['link']};
-        }}
-
-        .content-html details[open] summary {{
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid {c['border']};
-        }}
-
-        .content-html ul, .content-html ol {{
-            margin: 8px 0 16px 24px;
-            padding: 0;
-        }}
-
-        .content-html li {{
-            margin: 4px 0;
-        }}
-
-        .content-html p {{
-            margin: 0 0 16px 0;
-        }}
-
-        .content-html p:last-child {{
-            margin-bottom: 0;
-        }}
-
-        .content-html a {{
-            color: {c['link']};
-            text-decoration: none;
-        }}
-
-        .content-html a:hover {{
-            text-decoration: underline;
-        }}
-
-        .content-html code {{
-            padding: 0.2em 0.4em;
-            background-color: {c['bg_tertiary']};
-            border-radius: 3px;
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-            font-size: 85%;
-        }}
-
-        .content-html pre {{
-            padding: 16px;
-            background-color: {c['bg_tertiary']};
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 16px 0;
-        }}
-
-        .content-html pre code {{
-            padding: 0;
-            background-color: transparent;
-        }}
-
-        .content-html blockquote {{
-            margin: 16px 0;
-            padding: 0 16px;
-            border-left: 4px solid {c['border']};
-            color: {c['text_secondary']};
         }}
 
         .sidebar {{
@@ -478,100 +393,9 @@ class GitHubHTMLGenerator:
             font-size: 12px;
         }}
 
+        /* markdown-body class from github-markdown.css handles all content styling */
         .comment-body {{
             padding: 16px;
-        }}
-
-        .comment-body p {{
-            margin-bottom: 16px;
-        }}
-
-        .comment-body p:last-child {{
-            margin-bottom: 0;
-        }}
-
-        /* Apply same HTML content styles to comments */
-        .comment-body .content-html {{
-            line-height: 1.6;
-        }}
-
-        .comment-body .content-html details {{
-            margin: 16px 0;
-            padding: 16px;
-            background-color: {c['bg_tertiary']};
-            border: 1px solid {c['border']};
-            border-radius: 6px;
-        }}
-
-        .comment-body .content-html summary {{
-            cursor: pointer;
-            font-weight: 600;
-            margin-bottom: 8px;
-            user-select: none;
-        }}
-
-        .comment-body .content-html summary:hover {{
-            color: {c['link']};
-        }}
-
-        .comment-body .content-html details[open] summary {{
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid {c['border']};
-        }}
-
-        .comment-body .content-html ul, .comment-body .content-html ol {{
-            margin: 8px 0 16px 24px;
-            padding: 0;
-        }}
-
-        .comment-body .content-html li {{
-            margin: 4px 0;
-        }}
-
-        .comment-body .content-html p {{
-            margin: 0 0 16px 0;
-        }}
-
-        .comment-body .content-html p:last-child {{
-            margin-bottom: 0;
-        }}
-
-        .comment-body .content-html a {{
-            color: {c['link']};
-            text-decoration: none;
-        }}
-
-        .comment-body .content-html a:hover {{
-            text-decoration: underline;
-        }}
-
-        .comment-body .content-html code {{
-            padding: 0.2em 0.4em;
-            background-color: {c['bg_tertiary']};
-            border-radius: 3px;
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-            font-size: 85%;
-        }}
-
-        .comment-body .content-html pre {{
-            padding: 16px;
-            background-color: {c['bg_tertiary']};
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 16px 0;
-        }}
-
-        .comment-body .content-html pre code {{
-            padding: 0;
-            background-color: transparent;
-        }}
-
-        .comment-body .content-html blockquote {{
-            margin: 16px 0;
-            padding: 0 16px;
-            border-left: 4px solid {c['border']};
-            color: {c['text_secondary']};
         }}
 
         @media (max-width: 768px) {{
