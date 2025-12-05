@@ -36,6 +36,7 @@ class Importer:
             'Authorization': f'token {self.project.config.github_pat}'
         }
         self._dry_run_issue_counter = -1
+        self._dry_run_index_data = []
 
     def import_milestones(self):
         """
@@ -166,6 +167,110 @@ class Importer:
         # Return unique links
         return list(set(jira_links))
 
+    def _format_issue_as_markdown(self, issue, comments, jira_key):
+        """
+        Formats an issue and its comments as markdown.
+        """
+        md = []
+
+        # Title
+        md.append(f"# {issue.get('title', 'Untitled')}\n")
+
+        # Metadata
+        md.append("## Metadata\n")
+        md.append(f"**Jira Key:** {jira_key}\n\n")
+        md.append(f"**State:** {issue.get('state', 'open')}\n\n")
+
+        # Labels
+        labels = issue.get('labels', [])
+        if labels:
+            md.append(f"**Labels:** {', '.join(labels)}\n\n")
+        else:
+            md.append("**Labels:** None\n\n")
+
+        # Milestone
+        if 'milestone' in issue:
+            md.append(f"**Milestone:** {issue['milestone']}\n\n")
+
+        # Assignee
+        if 'assignee' in issue and issue['assignee']:
+            md.append(f"**Assignee:** @{issue['assignee']}\n\n")
+
+        # Created at
+        if 'created_at' in issue:
+            md.append(f"**Created:** {issue['created_at']}\n\n")
+
+        # Closed at
+        if 'closed_at' in issue and issue['closed_at']:
+            md.append(f"**Closed:** {issue['closed_at']}\n\n")
+
+        # Body
+        md.append("## Description\n\n")
+        body = issue.get('body', '')
+        if body:
+            md.append(f"{body}\n\n")
+        else:
+            md.append("_No description provided_\n\n")
+
+        # Comments
+        if comments:
+            md.append(f"## Comments ({len(comments)})\n\n")
+            for i, comment in enumerate(comments, 1):
+                md.append(f"### Comment {i}\n\n")
+                if 'created_at' in comment:
+                    md.append(f"**Date:** {comment['created_at']}\n\n")
+                md.append(f"{comment.get('body', '')}\n\n")
+                md.append("---\n\n")
+
+        return ''.join(md)
+
+    def _generate_index_markdown(self):
+        """
+        Generates an index.md file listing all issues.
+        """
+        if not self._dry_run_index_data:
+            return
+
+        md = []
+        md.append("# Issues Index\n\n")
+        md.append(f"Total issues: {len(self._dry_run_index_data)}\n\n")
+
+        # Create a table
+        md.append("| Jira Key | Title | State | Labels | Created | Closed |\n")
+        md.append("|----------|-------|-------|--------|---------|--------|\n")
+
+        for issue_data in self._dry_run_index_data:
+            jira_key = issue_data['jira_key']
+            title = issue_data['title'].replace('|', '\\|')  # Escape pipes in title
+            state = issue_data['state']
+            labels = ', '.join(issue_data['labels']) if issue_data['labels'] else '-'
+            labels = labels.replace('|', '\\|')  # Escape pipes in labels
+            created = issue_data.get('created_at', '-')
+            closed = issue_data.get('closed_at', '-')
+
+            # Create a link to the markdown file
+            md.append(f"| [{jira_key}]({jira_key}.md) | {title} | {state} | {labels} | {created} | {closed} |\n")
+
+        # Add summary statistics
+        md.append("\n## Statistics\n\n")
+        open_issues = sum(1 for d in self._dry_run_index_data if d['state'] == 'open')
+        closed_issues = sum(1 for d in self._dry_run_index_data if d['state'] == 'closed')
+        md.append(f"- **Open:** {open_issues}\n")
+        md.append(f"- **Closed:** {closed_issues}\n")
+
+        # Count labels
+        all_labels = {}
+        for issue_data in self._dry_run_index_data:
+            for label in issue_data['labels']:
+                all_labels[label] = all_labels.get(label, 0) + 1
+
+        if all_labels:
+            md.append("\n## Labels\n\n")
+            for label, count in sorted(all_labels.items(), key=lambda x: x[1], reverse=True):
+                md.append(f"- **{label}:** {count}\n")
+
+        return ''.join(md)
+
     def import_issues(self, start_from_count):
         """
         Starts the issue import into GitHub:
@@ -271,6 +376,14 @@ class Importer:
         print(json_mapping + ' saved.')
         print('Text mapping: ' + self.jira_to_github_txt_mapping)
 
+        # Generate index.md in dry-run mode
+        if self.project.config.dry_run and self._dry_run_index_data:
+            index_md = self._generate_index_markdown()
+            index_filename = 'dry-run/index.md'
+            with open(index_filename, 'w', encoding='utf-8') as f:
+                f.write(index_md)
+            print(f'Dry-run: saved index to {index_filename}')
+
     def import_issue_with_comments(self, issue, comments):
         """
         Imports a single issue with its comments into GitHub.
@@ -287,7 +400,7 @@ class Importer:
         jira_key = issue['key']
         del issue['key']
 
-        response = self.upload_github_issue(issue, comments)
+        response = self.upload_github_issue(issue, comments, jira_key)
         status_url = response.json()['url']
         gh_issue_url = self.wait_for_issue_creation(status_url).json()['issue_url']
         gh_issue_id = int(gh_issue_url.split('/')[-1])
@@ -301,9 +414,10 @@ class Importer:
         with open(self.jira_to_complete_github_txt_mapping, 'a') as f:
             f.write(jira_complete_gh)
 
-    def upload_github_issue(self, issue, comments):
+    def upload_github_issue(self, issue, comments, jira_key):
         """
         Uploads a single issue to GitHub asynchronously with the Issue Import API.
+        In dry-run mode, saves the issue data to a JSON file in the dry-run folder.
         """
         issue_url = self.github_api_url + '/import/issues'
         # Delete keys starting with "_", only there for data gathering, not for issue upload
@@ -313,9 +427,36 @@ class Importer:
         issue_data = {'issue': issue, 'comments': comments}
 
         if self.project.config.dry_run:
+            # Create dry-run folder if it doesn't exist
+            dry_run_folder = 'dry-run'
+            os.makedirs(dry_run_folder, exist_ok=True)
+
+            # Save issue data to JSON file
+            json_filename = os.path.join(dry_run_folder, f'{jira_key}.json')
+            with open(json_filename, 'w', encoding='utf-8') as f:
+                json.dump(issue_data, f, indent=2, ensure_ascii=False)
+            print(f'Dry-run: saved issue data to {json_filename}')
+
+            # Save issue as markdown file
+            md_content = self._format_issue_as_markdown(issue, comments, jira_key)
+            md_filename = os.path.join(dry_run_folder, f'{jira_key}.md')
+            with open(md_filename, 'w', encoding='utf-8') as f:
+                f.write(md_content)
+            print(f'Dry-run: saved issue markdown to {md_filename}')
+
+            # Collect data for index
+            self._dry_run_index_data.append({
+                'jira_key': jira_key,
+                'title': issue.get('title', 'Untitled'),
+                'state': issue.get('state', 'open'),
+                'labels': issue.get('labels', []),
+                'created_at': issue.get('created_at', ''),
+                'closed_at': issue.get('closed_at', '')
+            })
+
             return FakeResponse({'url': 'dry_run'})
 
-        response = requests.post(issue_url, json=issue_data, headers=self.headers, 
+        response = requests.post(issue_url, json=issue_data, headers=self.headers,
             timeout=Importer._DEFAULT_TIME_OUT)
         if response.status_code == 202:
             return response
