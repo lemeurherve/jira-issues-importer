@@ -750,15 +750,20 @@ class GitHubHTMLGenerator:
                 </tbody>
             </table>
         </div>
+'''
 
-        {f'''
+        # Add labels section if there are any labels
+        if all_labels:
+            html += f'''
         <div class="labels-section">
             <h2>Labels</h2>
             <div class="labels-grid">
                 {labels_list_html}
             </div>
         </div>
-        ''' if all_labels else ''}
+'''
+
+        html += '''
     </div>
 </body>
 </html>'''
