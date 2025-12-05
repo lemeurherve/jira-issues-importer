@@ -64,7 +64,9 @@ class GitHubHTMLGenerator:
 
     @staticmethod
     def _render_markdown_to_html(md_text):
-        """Render content to HTML. Handles both HTML and markdown input."""
+        """Render content to HTML. Handles both HTML and markdown input.
+        Content is returned without wrapping - wrapping with markdown-body class
+        is done by the caller."""
         if not md_text:
             return '<p><em>No description provided</em></p>'
 
@@ -73,8 +75,7 @@ class GitHubHTMLGenerator:
 
         if has_html_tags:
             # Content is already HTML, return as-is
-            # Just wrap in a div for consistency
-            return f'<div class="content-html">{md_text}</div>'
+            return md_text
 
         # Content is markdown, convert it
         html = escape(md_text)
@@ -179,7 +180,7 @@ class GitHubHTMLGenerator:
                     <span class="comment-author">Comment {i}</span>
                     <span class="comment-date">{comment_date}</span>
                 </div>
-                <div class="comment-body">
+                <div class="comment-body markdown-body">
                     {comment_body}
                 </div>
             </div>
@@ -192,6 +193,8 @@ class GitHubHTMLGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{escape(title)} · {jira_key}</title>
+    <link rel="stylesheet" href="../github-css/primer.css">
+    <link rel="stylesheet" href="../github-css/github-markdown.css">
     <style>
         * {{
             margin: 0;
@@ -597,7 +600,7 @@ class GitHubHTMLGenerator:
         <div class="main-content">
             <div>
                 <div class="issue-body-container">
-                    <div class="issue-body">
+                    <div class="issue-body markdown-body">
                         {self._render_markdown_to_html(body)}
                     </div>
                 </div>
@@ -720,6 +723,8 @@ class GitHubHTMLGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Issues Index - Dry Run Output</title>
+    <link rel="stylesheet" href="github-css/primer.css">
+    <link rel="stylesheet" href="github-css/github-markdown.css">
     <style>
         * {{
             margin: 0;
