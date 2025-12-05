@@ -217,6 +217,7 @@ class Project:
         body += '\n<li><b>votes</b>: ' + str(item.votes)
         body += '\n<li><b>watchers</b>: ' + str(item.watches)
         body += '\n<li><b>imported</b>: ' + self.current_datedime
+        body += f'\n<li><b>Original link</b>: <a class="original-jira-link" href="{issue_url}" target="_blank">{issue_url}</a>' + self.current_datedime
         body += '\n</ul></i>'
         if item.description.text is not None:
             body += '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'
@@ -438,6 +439,7 @@ class Project:
                 comment_username = self._proper_jirauser_username(comment.get('author'))
                 comment_author = self._username_and_avatar(comment_username, 'for_comment')
                 a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
+                a_comment_link_original = f'<a class="original-jira-link" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
                 comment_raw_details = ''
                 comment_text = ''
                 if comment.text is not None:
@@ -455,7 +457,8 @@ class Project:
                 comment_body = (
                     f'<details><summary><i>{comment_author}:</i></summary>\n\n'
                     f'<ul>\n'
-                    f'<li><i>Original {a_comment_link}comment link</a></i>\n'
+                    f'<li><i>{a_comment_link}Comment link</a></i>\n'
+                    f'<li><i>Original {a_comment_link_original}comment link</a> (no redirect)</i>\n'
                     f'{comment_raw_details}\n'
                     f'</ul>\n'
                     f'</details>\n\n'
@@ -537,6 +540,36 @@ class Project:
         return re.sub('&(%s);' % '|'.join(name2codepoint),
                       lambda m: chr(name2codepoint[m.group(1)]), s)
 
+    def _replace_jira_urls_with_redirection_service(self, s):
+        """
+        Replace Jira browse URLs with redirection service URLs if configured.
+        Preserves query strings from the original URLs.
+        Excludes links marked with 'original-jira-comment-link' class.
+
+        Example: https://issues.jenkins.io/browse/INFRA-123?focusedId=456
+                 -> https://issue-redirect.jenkins.io/issue/INFRA/123?focusedId=456
+        """
+        if s is None or not self.config.redirection_service:
+            return s if s is not None else ''
+
+        # Pattern to match any Jira browse URL (with or without https://)
+        # Uses negative lookbehind to exclude 'original-jira-link' class links
+        # Multiple lookbehinds handle cases with/without protocol in the href attribute
+        pattern = (
+            rf'(?<!<a class="original-jira-link" href=")'
+            rf'(?<!<a class="original-jira-link" href="https://)'
+            rf'(?<!<a class="original-jira-link" href="http://)'
+            rf'(?:https?://)?issues\.jenkins\.io/browse/{self.name}-(\d+)(\?[^\s<>"]*)?'
+        )
+
+        # Replace with redirection service URL + issue number + query string (if present)
+        issue_number_and_query = r'\1\2'
+        # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
+        # replacement = f'{self.config.redirection_service}/{self.name}/{issue_number_and_query}'
+        replacement = f'{self.config.redirection_service}/issue/{issue_number_and_query}'
+
+        return re.sub(pattern, replacement, s)
+
     def _clean_html(self, s):
         if s is None:
             return ''
@@ -553,6 +586,10 @@ class Project:
 
         # Escape @mentions to prevent unwanted mentions in GitHub
         s = re.sub(r'@([A-Za-z0-9._-]+)', '@\u200B\\1', s)
+
+        # Replace Jira URLs with redirection service URLs
+        s = self._replace_jira_urls_with_redirection_service(s)
+
         return s
 
     def _proper_jirauser_username(self, name):
