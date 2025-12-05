@@ -64,10 +64,19 @@ class GitHubHTMLGenerator:
 
     @staticmethod
     def _render_markdown_to_html(md_text):
-        """Basic markdown to HTML conversion for issue bodies."""
+        """Render content to HTML. Handles both HTML and markdown input."""
         if not md_text:
             return '<p><em>No description provided</em></p>'
 
+        # Check if content is already HTML (contains HTML tags)
+        has_html_tags = bool(re.search(r'<[a-zA-Z][^>]*>', md_text))
+
+        if has_html_tags:
+            # Content is already HTML, return as-is
+            # Just wrap in a div for consistency
+            return f'<div class="content-html">{md_text}</div>'
+
+        # Content is markdown, convert it
         html = escape(md_text)
 
         # Convert markdown links
@@ -305,6 +314,90 @@ class GitHubHTMLGenerator:
             text-decoration: underline;
         }}
 
+        /* Styles for HTML content from Jira */
+        .content-html {{
+            line-height: 1.6;
+        }}
+
+        .content-html details {{
+            margin: 16px 0;
+            padding: 16px;
+            background-color: {c['bg_secondary']};
+            border: 1px solid {c['border']};
+            border-radius: 6px;
+        }}
+
+        .content-html summary {{
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 8px;
+            user-select: none;
+        }}
+
+        .content-html summary:hover {{
+            color: {c['link']};
+        }}
+
+        .content-html details[open] summary {{
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid {c['border']};
+        }}
+
+        .content-html ul, .content-html ol {{
+            margin: 8px 0 16px 24px;
+            padding: 0;
+        }}
+
+        .content-html li {{
+            margin: 4px 0;
+        }}
+
+        .content-html p {{
+            margin: 0 0 16px 0;
+        }}
+
+        .content-html p:last-child {{
+            margin-bottom: 0;
+        }}
+
+        .content-html a {{
+            color: {c['link']};
+            text-decoration: none;
+        }}
+
+        .content-html a:hover {{
+            text-decoration: underline;
+        }}
+
+        .content-html code {{
+            padding: 0.2em 0.4em;
+            background-color: {c['bg_tertiary']};
+            border-radius: 3px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 85%;
+        }}
+
+        .content-html pre {{
+            padding: 16px;
+            background-color: {c['bg_tertiary']};
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }}
+
+        .content-html pre code {{
+            padding: 0;
+            background-color: transparent;
+        }}
+
+        .content-html blockquote {{
+            margin: 16px 0;
+            padding: 0 16px;
+            border-left: 4px solid {c['border']};
+            color: {c['text_secondary']};
+        }}
+
         .sidebar {{
             background-color: {c['bg_primary']};
             border: 1px solid {c['border']};
@@ -392,6 +485,90 @@ class GitHubHTMLGenerator:
 
         .comment-body p:last-child {{
             margin-bottom: 0;
+        }}
+
+        /* Apply same HTML content styles to comments */
+        .comment-body .content-html {{
+            line-height: 1.6;
+        }}
+
+        .comment-body .content-html details {{
+            margin: 16px 0;
+            padding: 16px;
+            background-color: {c['bg_tertiary']};
+            border: 1px solid {c['border']};
+            border-radius: 6px;
+        }}
+
+        .comment-body .content-html summary {{
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 8px;
+            user-select: none;
+        }}
+
+        .comment-body .content-html summary:hover {{
+            color: {c['link']};
+        }}
+
+        .comment-body .content-html details[open] summary {{
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid {c['border']};
+        }}
+
+        .comment-body .content-html ul, .comment-body .content-html ol {{
+            margin: 8px 0 16px 24px;
+            padding: 0;
+        }}
+
+        .comment-body .content-html li {{
+            margin: 4px 0;
+        }}
+
+        .comment-body .content-html p {{
+            margin: 0 0 16px 0;
+        }}
+
+        .comment-body .content-html p:last-child {{
+            margin-bottom: 0;
+        }}
+
+        .comment-body .content-html a {{
+            color: {c['link']};
+            text-decoration: none;
+        }}
+
+        .comment-body .content-html a:hover {{
+            text-decoration: underline;
+        }}
+
+        .comment-body .content-html code {{
+            padding: 0.2em 0.4em;
+            background-color: {c['bg_tertiary']};
+            border-radius: 3px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 85%;
+        }}
+
+        .comment-body .content-html pre {{
+            padding: 16px;
+            background-color: {c['bg_tertiary']};
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }}
+
+        .comment-body .content-html pre code {{
+            padding: 0;
+            background-color: transparent;
+        }}
+
+        .comment-body .content-html blockquote {{
+            margin: 16px 0;
+            padding: 0 16px;
+            border-left: 4px solid {c['border']};
+            color: {c['text_secondary']};
         }}
 
         @media (max-width: 768px) {{
