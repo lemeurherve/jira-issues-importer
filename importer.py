@@ -217,7 +217,10 @@ class Importer:
             issue_mapping['votes_count'] = issue_votes_count
             issue_mapping['has_votes'] = 'true' if issue_votes_count > 0 else 'false'
             issue_mapping['jira_links'] = []
+            issue_mapping['jira_links_in_body'] = []
             issue_mapping['jira_links_in_comments'] = []
+            issue_mapping['has_jira_links'] = []
+            issue_mapping['has_jira_links_in_body'] = []
 
             issue_links = self._find_jira_links(issue_mapping['body'])
             del issue_mapping['body']
