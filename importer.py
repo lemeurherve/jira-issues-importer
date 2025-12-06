@@ -467,8 +467,8 @@ class Importer:
             )
         else:
             raise RuntimeError(
-                "Failed to POST issue: '{}' due to unexpected HTTP status code: {}\nerrors:\n{}"
-                .format(issue['title'], response.status_code, response.json())
+                "Failed to POST issue at {}: '{}' due to unexpected HTTP status code: {}\nerrors:\n{}"
+                .format(issue_url, issue['title'], response.status_code, response.json())
             )
 
     def wait_for_issue_creation(self, status_url):

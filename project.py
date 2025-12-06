@@ -161,7 +161,7 @@ class Project:
         reporter = self._username_and_avatar(reporter_username)
         issue_url = item.link.text
         issue_title_without_key = item.title.text[item.title.text.index("]") + 2:len(item.title.text)]
-        body += f'\n\n---\n<details><summary><i>Originally reported by {reporter}, imported from: <a class="no-jira-link-rewrite" href="{issue_url}" target="_blank">{issue_title_without_key}</a></i></summary>'
+        body += f'\n\n---\n<details><summary><i>Originally reported by {reporter}, imported from: <a class="original-jira-link" href="{issue_url}" target="_blank">{issue_title_without_key}</a></i></summary>'
         body += '\n<i><ul>'
 
         # metadata: assignee
@@ -294,6 +294,9 @@ class Project:
 
         # Put hidden refs on top of body
         body = hidden_refs + '\n\n' + body
+
+        # Apply Jira URL rewriting to the entire body (including metadata sections)
+        body = self._replace_jira_urls_with_redirection_service(body)
 
         # _ keys are only there for gathering import data
         self._project['Issues'].append({'title': item.title.text,
@@ -438,6 +441,7 @@ class Project:
                 comment_username = self._proper_jirauser_username(comment.get('author'))
                 comment_author = self._username_and_avatar(comment_username, 'for_comment')
                 a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
+                a_comment_link_original = f'<a class="original-jira-link" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
                 comment_raw_details = ''
                 comment_text = ''
                 if comment.text is not None:
@@ -455,7 +459,8 @@ class Project:
                 comment_body = (
                     f'<details><summary><i>{comment_author}:</i></summary>\n\n'
                     f'<ul>\n'
-                    f'<li><i>Original {a_comment_link}comment link</a></i>\n'
+                    f'<li><i>{a_comment_link}Comment link</a></i>\n'
+                    f'<li><i>Original {a_comment_link_original}comment link</a> (no redirect)</i>\n'
                     f'{comment_raw_details}\n'
                     f'</ul>\n'
                     f'</details>\n\n'
@@ -469,6 +474,9 @@ class Project:
                     f'<!-- [jira_comment_id={comment_id}] -->\n'
                     f'<!-- [comment_author={comment_username}] -->\n'
                 ) + comment_body
+
+                # Apply Jira URL rewriting to the entire comment body (including metadata sections)
+                comment_body = self._replace_jira_urls_with_redirection_service(comment_body)
 
                 self._project['Issues'][-1]['comments'].append({
                     "created_at": self._convert_to_iso(comment.get('created')),
@@ -537,6 +545,40 @@ class Project:
         return re.sub('&(%s);' % '|'.join(name2codepoint),
                       lambda m: chr(name2codepoint[m.group(1)]), s)
 
+    def _replace_jira_urls_with_redirection_service(self, s):
+        """
+        Replace Jira browse URLs with redirection service URLs if configured.
+        Preserves query strings from the original URLs.
+        Excludes links marked with 'original-jira-link' class.
+
+        Example: https://issues.jenkins.io/browse/INFRA-123?focusedId=456
+                 -> https://issue-redirect.jenkins.io/issue/123?focusedId=456
+        """
+        if s is None or not self.config.redirection_service:
+            return s if s is not None else ''
+
+        # Pattern to match any Jira browse URL (with or without https://)
+        # Uses negative lookbehind to exclude 'original-jira-link' class links
+        # Multiple lookbehinds handle cases with/without protocol in the href attribute
+        # Remove protocol from jiraBaseUrl since we'll add an optional one
+        jira_base_without_protocol = self.jiraBaseUrl.replace('https://', '').replace('http://', '')
+        escaped_jira_base_url = jira_base_without_protocol.replace('.', r'\.')
+        pattern = (
+            rf'(?<!<a class="original-jira-link" href=")'
+            rf'(?<!<a class="original-jira-link" href="https://)'
+            rf'(?<!<a class="original-jira-link" href="http://)'
+            # TODO: use escape
+            rf'(?:https?://)?{escaped_jira_base_url}/browse/{self.name}-(\d+)(\?[^\s<>"]*)?'
+        )
+
+        # Replace with redirection service URL + issue number + query string (if present)
+        issue_number_and_query = r'\1\2'
+        # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
+        # replacement = f'{self.config.redirection_service}/{self.name}/{issue_number_and_query}'
+        replacement = f'{self.config.redirection_service}/issue/{issue_number_and_query}'
+
+        return re.sub(pattern, replacement, s)
+
     def _clean_html(self, s):
         if s is None:
             return ''
@@ -553,6 +595,7 @@ class Project:
 
         # Escape @mentions to prevent unwanted mentions in GitHub
         s = re.sub(r'@([A-Za-z0-9._-]+)', '@\u200B\\1', s)
+
         return s
 
     def _proper_jirauser_username(self, name):
