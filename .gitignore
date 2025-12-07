@@ -102,3 +102,6 @@ jira-comments.txt
 
 # Mappings
 mappings/
+
+# Dry-run outputs
+dry-run/
