@@ -440,8 +440,7 @@ class Project:
                 comment_id = comment.get('id')
                 comment_username = self._proper_jirauser_username(comment.get('author'))
                 comment_author = self._username_and_avatar(comment_username, 'for_comment')
-                a_comment_link = f'<a class="no-jira-link-rewrite" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
-                a_comment_link_original = f'<a class="original-jira-link" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
+                a_comment_link = f'<a class="original-jira-link" href="{item.link.text}?focusedId={comment_id}&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-{comment_id}">'
                 comment_raw_details = ''
                 comment_text = ''
                 if comment.text is not None:
@@ -459,8 +458,7 @@ class Project:
                 comment_body = (
                     f'<details><summary><i>{comment_author}:</i></summary>\n\n'
                     f'<ul>\n'
-                    f'<li><i>{a_comment_link}Comment link</a></i>\n'
-                    f'<li><i>Original {a_comment_link_original}comment link</a> (no redirect)</i>\n'
+                    f'<li><i>Original {a_comment_link}comment link</a></i>\n'
                     f'{comment_raw_details}\n'
                     f'</ul>\n'
                     f'</details>\n\n'
