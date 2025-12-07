@@ -529,7 +529,7 @@ class Importer:
                 f'<!-- [synthetic_comment=relationship] -->\n'
                 f'<!-- [jira_relationship_key={jira_key}] -->'
                 f'<!-- [jira_relationship_type={relationship_type}] -->\n'
-                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.project.config.github_account}/{self.project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
+                f'<i>[Original `{relationship_type}` from Jira: <a class="jira-relationship" href="https://github.com/{self.project.config.github_account}/{self.project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
             )
 
         for jira_key in duplicates:
