@@ -131,13 +131,14 @@ def read_xml_files(file_path):
     return files
 
 
+# TODO: match a list of project names (ex: JENKINS, INFRA, etc.) instead of just the current one
 def replace_jira_urls_with_redirection_service(project, content):
     """
     Replace Jira browse URLs with redirection service URLs if configured.
     Preserves query strings from the original URLs.
     Excludes links marked with 'original-jira-link' class.
 
-    Example: https://issues.jenkins.io/browse/INFRA-123?focusedId=456
+    Example: https://issues.jenkins.io/browse/JENKINS-123?focusedId=456
                 -> https://issue-redirect.jenkins.io/issue/123?focusedId=456
     """
     if content is None or not project.config.redirection_service:
@@ -153,7 +154,6 @@ def replace_jira_urls_with_redirection_service(project, content):
         rf'(?<!<a class="original-jira-link" href=")'
         rf'(?<!<a class="original-jira-link" href="https://)'
         rf'(?<!<a class="original-jira-link" href="http://)'
-        # TODO: use escape
         rf'(?:https?://)?{escaped_jira_base_url}/browse/{project.name}-(\d+)(\?[^\s<>"]*)?'
     )
 
@@ -172,5 +172,49 @@ def get_github_search_or_redirect_url_from_jira_key(project, jira_key):
     jira_id = jira_key.split("-")[1]
     url = f'https://github.com/{project.config.github_account}/{project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22'
     if project.config.redirection_service:
+        # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
         url = f'{project.config.redirection_service}/issue/{jira_id}'
     return f'<a class="jira-relationship" href="{url}">{jira_key}</a>'
+
+
+# TODO: match a list of project names (ex: JENKINS, INFRA, etc.) instead of just the current one
+def replace_plain_jira_keys_with_links(project, content):
+    """
+    Replace plain text issue key references with markdown links.
+
+    Use redirection service if set.
+
+    Example: Plain text "JENKINS-123" -> [JENKINS-123](https://issue-redirect.jenkins.io/issue/123)
+
+    Excludes keys that are:
+    - Already part of a URL
+    - Already in a markdown or HTML link
+    """
+    if content is None or not project.config.redirection_service:
+        return content if content is not None else ''
+
+    # Pattern to match plain text issue key references
+    # Excludes keys already part of URLs or links
+    plain_key_pattern = (
+        rf'(?<!browse/)'  # Not after browse/
+        rf'(?<!href=")'  # Not after href="
+        rf'(?<!\[)'  # Not after [
+        rf'(?<!\()'  # Not after (
+        rf'(?<!>)'  # Not after > (inside HTML tags)
+        rf'\b({project.name}-(\d+))\b'  # Match whole word PROJECT-NUMBER
+        rf'(?!\])'  # Not before ]
+        rf'(?!\))'  # Not before )
+    )
+
+    def replace_plain_key(match):
+        full_key = match.group(1)
+        issue_number = match.group(2)
+        if project.config.redirection_service:
+            # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
+            # link_url = f'{self.config.redirection_service}/{self.name}/{issue_number}'
+            link_url = f'{project.config.redirection_service}/issue/{issue_number}'
+        else:
+            link_url = f'{project.jiraBaseUrl}/browse/{full_key}'
+        return f'<a class="jira-plain-text-key" href="{link_url}">{full_key}</a>'
+
+    return re.sub(plain_key_pattern, replace_plain_key, content)
