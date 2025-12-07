@@ -2,6 +2,7 @@ from lxml import objectify
 import os
 import glob
 import requests
+import re
 
 from collections import defaultdict
 
@@ -128,3 +129,48 @@ def read_xml_files(file_path):
             files.append(read_xml_file(file_name))
 
     return files
+
+
+def replace_jira_urls_with_redirection_service(project, content):
+    """
+    Replace Jira browse URLs with redirection service URLs if configured.
+    Preserves query strings from the original URLs.
+    Excludes links marked with 'original-jira-link' class.
+
+    Example: https://issues.jenkins.io/browse/INFRA-123?focusedId=456
+                -> https://issue-redirect.jenkins.io/issue/123?focusedId=456
+    """
+    if content is None or not project.config.redirection_service:
+        return content if content is not None else ''
+
+    # Pattern to match any Jira browse URL (with or without https://)
+    # Uses negative lookbehind to exclude 'original-jira-link' class links
+    # Multiple lookbehinds handle cases with/without protocol in the href attribute
+    # Remove protocol from jiraBaseUrl since we'll add an optional one
+    jira_base_without_protocol = project.jiraBaseUrl.replace('https://', '').replace('http://', '')
+    escaped_jira_base_url = jira_base_without_protocol.replace('.', r'\.')
+    pattern = (
+        rf'(?<!<a class="original-jira-link" href=")'
+        rf'(?<!<a class="original-jira-link" href="https://)'
+        rf'(?<!<a class="original-jira-link" href="http://)'
+        # TODO: use escape
+        rf'(?:https?://)?{escaped_jira_base_url}/browse/{project.name}-(\d+)(\?[^\s<>"]*)?'
+    )
+
+    # Replace with redirection service URL + issue number + query string (if present)
+    issue_number_and_query = r'\1\2'
+    # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
+    # replacement = f'{project.config.redirection_service}/{project.name}/{issue_number_and_query}'
+    replacement = f'{project.config.redirection_service}/issue/{issue_number_and_query}'
+
+    return re.sub(pattern, replacement, content)
+
+def get_github_search_or_redirect_url_from_jira_key(project, jira_key):
+    """
+    Returns the GitHub search URL or redirection service URL for a given Jira key.
+    """
+    jira_id = jira_key.split("-")[1]
+    url = f'https://github.com/{project.config.github_account}/{project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22'
+    if project.config.redirection_service:
+        url = f'{project.config.redirection_service}/issue/{jira_id}'
+    return f'<a class="jira-relationship" href="{url}">{jira_key}</a>'

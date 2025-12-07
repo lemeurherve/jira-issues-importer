@@ -5,7 +5,7 @@ import json
 import copy
 import re
 
-from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label
+from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, get_github_search_or_redirect_url_from_jira_key
 
 class FakeResponse:
     def __init__(self, data):
@@ -524,12 +524,13 @@ class Importer:
             epic_key = None
 
         def _comment_body(jira_key, relationship_type):
+            a_url = get_github_search_or_redirect_url_from_jira_key(self.project, str(jira_key))
             return (
                 f'<!-- ### Imported Jira references for easier searching -->\n'
                 f'<!-- [synthetic_comment=relationship] -->\n'
                 f'<!-- [jira_relationship_key={jira_key}] -->'
                 f'<!-- [jira_relationship_type={relationship_type}] -->\n'
-                f'<i>[Original `{relationship_type}` from Jira: <a href="https://github.com/{self.project.config.github_account}/{self.project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22">{jira_key}</a>]</i>\n'
+                f'<i>[Original `{relationship_type}` from Jira: {a_url}]</i>\n'
             )
 
         for jira_key in duplicates:
