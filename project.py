@@ -2,7 +2,6 @@ import os
 from collections import defaultdict
 from html.entities import name2codepoint
 from dateutil.parser import parse
-from datetime import datetime
 import re
 import requests
 import time
@@ -19,7 +18,7 @@ class Project:
         self.config = config
         self.version = config.version
         self.name = config.name
-        self.current_datedime = datetime.today().strftime('%Y-%m-%d')
+        self.current_datetime = config.current_datetime
         self.doneStatusCategoryId = config.jira_done_id
         self.jiraBaseUrl = config.jira_base_url
         self._project = {
@@ -216,7 +215,7 @@ class Project:
             pass
         body += '\n<li><b>votes</b>: ' + str(item.votes)
         body += '\n<li><b>watchers</b>: ' + str(item.watches)
-        body += '\n<li><b>imported</b>: ' + self.current_datedime
+        body += '\n<li><b>imported</b>: ' + self.current_datetime
         body += '\n</ul></i>'
         if item.description.text is not None:
             body += '\n<details><summary>Raw content of original issue</summary>\n\n<pre>\n' + item.description.text.replace('<br/>', '') + '</pre>\n</details>'

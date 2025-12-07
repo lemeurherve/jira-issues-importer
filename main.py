@@ -7,6 +7,9 @@ from importer import Importer
 from labelcolourselector import LabelColourSelector
 from utils import read_xml_files
 from config import load_config
+from datetime import datetime
+
+now = datetime.now()
 
 config = load_config([
     ("file_names", "JIRA_MIGRATION_FILE_PATHS", "Path to Jira XML query file (semi-colon separate for multiple)", None),
@@ -18,6 +21,7 @@ config = load_config([
     ("github_pat", "JIRA_MIGRATION_GITHUB_ACCESS_TOKEN", "GitHub Personal Access Token", None),
     ("hosted_artifact_org_repo", "JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO", "Hosted artifacts org/repo", "jenkinsci/artifacts-from-jira-issues"),
     ("redirection_service", "JIRA_MIGRATION_REDIRECTION_SERVICE", "URL of the redirection service (keep empty if none)", "https://issue-redirect.jenkins.io"),
+    ("current_datetime", "JIRA_MIGRATION_CURRENT_DATETIME", "Current date time for files creation", now.strftime('%Y-%m-%d')),
 ])
 
 print(f"Jira Migration Tool - version {config.version}")

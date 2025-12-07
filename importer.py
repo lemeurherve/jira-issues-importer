@@ -24,8 +24,8 @@ class Importer:
 
     def __init__(self, project):
         self.project = project
-        self.jira_to_github_txt_mapping = f'jira-keys-to-github-id_{self.project.current_datedime}.txt'
-        self.jira_to_complete_github_txt_mapping = f'jira-keys-to-github-id-for-external-use_{self.project.current_datedime}.txt'
+        self.jira_to_github_txt_mapping = f'jira-keys-to-github-id_{self.project.current_datetime}.txt'
+        self.jira_to_complete_github_txt_mapping = f'jira-keys-to-github-id-for-external-use_{self.project.current_datetime}.txt'
         self.github_api_url = f'https://api.github.com/repos/{self.project.config.github_account}/{self.project.config.github_repo}'
         self.jira_issue_replace_patterns = {
             'https://issues.jenkins.io/browse/%s%s' % (self.project.name, r'-(\d+)'): r'\1',
@@ -370,7 +370,7 @@ class Importer:
                 mapping['jira_links_in_comments_imported'] = list(set(mapping['jira_links_in_comments_imported']))
 
         # Save collected data to JSON after all issues are imported
-        json_mapping = f'jira-to-github-mapping_{self.project.current_datedime}.json'
+        json_mapping = f'jira-to-github-mapping_{self.project.current_datetime}.json'
         with open(json_mapping, 'w', encoding='utf-8') as f:
             json.dump(issue_mappings, f, indent=2, ensure_ascii=False)
         print(json_mapping + ' saved.')
