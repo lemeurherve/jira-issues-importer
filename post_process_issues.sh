@@ -40,6 +40,7 @@ process_issue_type() {
 }
 
 process_issue_type "rfe" "Enhancement"
+process_issue_type "enhancement" "Enhancement"
 process_issue_type "bug" "Bug"
 
 # handles an edge case where there are some epics with no issues
