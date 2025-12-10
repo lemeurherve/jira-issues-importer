@@ -39,8 +39,13 @@ def fetch_hosted_mappings(project):
     mapping_folder = os.path.abspath('./' + project.mapping_foldername)
     fresh = True
     if os.path.exists(mapping_folder):
-        reply = input("Start with fresh mapping files? [Y/n]: ").strip().lower()
-        fresh = (reply != "n")
+        # Check environment variable first for non-interactive mode
+        env_refresh = os.getenv("JIRA_MIGRATION_REFRESH_MAPPINGS")
+        if env_refresh is not None:
+            fresh = env_refresh.lower() in ('true', 'yes', '1', 'y')
+        else:
+            reply = input("Start with fresh mapping files? [Y/n]: ").strip().lower()
+            fresh = (reply != "n")
     else:
         os.makedirs(mapping_folder)
 
