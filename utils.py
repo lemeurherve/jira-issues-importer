@@ -170,7 +170,7 @@ def get_github_search_or_redirect_url_from_jira_key(project, jira_key):
     Returns the GitHub search URL or redirection service URL for a given Jira key.
     """
     jira_id = jira_key.split("-")[1]
-    url = f'https://github.com/{project.config.github_account}/{project.config.github_repo}/issues?q=is%3Aissue%20%22jira_issue_key%3D{jira_key}%22'
+    url = f'https://github.com/search?q=org%3A{project.config.github_account}+%22jira_issue_key%3D{jira_key}%22&type=issues'
     if project.config.redirection_service:
         # TODO: use project name when redirection service allows it to allow multiple projects (ex: JENKINS, INFRA)
         url = f'{project.config.redirection_service}/issue/{jira_id}'
