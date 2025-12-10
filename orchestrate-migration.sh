@@ -170,13 +170,13 @@ process_component() {
   
   # Step 1: Fetch issues from Jira
   log ""
-  log "Step 1/8: Fetching issues from Jira..."
+  log "Step 1/9: Fetching issues from Jira..."
   python3 ./fetch_issues.py
   validate_file "jira_output/result-0.xml" "Jira issues XML"
   
   # Step 2: Concatenate XML results
   log ""
-  log "Step 2/8: Concatenating XML results..."
+  log "Step 2/9: Concatenating XML results..."
   ./concatenate-xml-results.sh
   validate_file "jira_output/combined.xml" "Combined XML"
   
@@ -186,37 +186,42 @@ process_component() {
   
   # Step 3: Retrieve watchers and remote links
   log ""
-  log "Step 3/8: Retrieving watchers and remote links..."
+  log "Step 3/9: Retrieving watchers and remote links..."
   ./retrieve-watchers-and-remotelinks.sh
   validate_file "combined-remotelinks.txt" "Remote links"
   
   # Step 4: Enable GitHub Issues on repository
   log ""
-  log "Step 4/8: Enabling GitHub Issues on repository..."
+  log "Step 4/9: Enabling GitHub Issues on repository..."
   gh api -X PATCH "repos/$github_owner/$github_repo" --field has_issues=true || true
   log "✓ GitHub Issues enabled (or already enabled)"
   
   # Step 5: Import issues to GitHub
   log ""
-  log "Step 5/8: Importing issues to GitHub..."
+  log "Step 5/9: Importing issues to GitHub..."
   python3 -u ./main.py
   validate_file "jira-keys-to-github-id_${JIRA_MIGRATION_CURRENT_DATETIME}.txt" "Jira-to-GitHub mapping"
   
   # Step 6: Post-process epics
   log ""
-  log "Step 6/8: Post-processing epic relationships..."
+  log "Step 6/9: Post-processing epic relationships..."
   ./post_process_epics.sh "$github_owner" "$github_repo"
   
   # Step 7: Post-process issue types
   log ""
-  log "Step 7/8: Post-processing issue types..."
+  log "Step 7/9: Post-processing issue types..."
   ./post_process_issues.sh "$github_owner" "$github_repo"
   
   # Step 8: Add comments to Jira issues
   log ""
-  log "Step 8/8: Adding migration comments to Jira..."
+  log "Step 8/9: Adding migration comments to Jira..."
   export JIRA_GITHUB_MAPPING_FILE="jira-keys-to-github-id_${JIRA_MIGRATION_CURRENT_DATETIME}.txt"
   ./jira-commenter.sh
+  
+  # Step 9: Archive Jira component
+  log ""
+  log "Step 9/9: Archiving Jira component..."
+  ./jira-archive-component.sh "$component"
   
   # Archive outputs
   log ""
