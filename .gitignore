@@ -106,3 +106,5 @@ mappings/
 
 # Dry-run outputs
 dry-run/
+
+components.txt
