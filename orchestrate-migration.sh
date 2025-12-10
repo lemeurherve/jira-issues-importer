@@ -28,13 +28,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Validate arguments
+# Default to components.txt if not specified
 if [ -z "$COMPONENTS_FILE" ]; then
-  echo "Error: Components file not specified"
-  echo "Usage: $0 [--resume] <components-file>"
-  exit 1
+  COMPONENTS_FILE="components.txt"
 fi
 
+# Validate arguments
 if [ ! -f "$COMPONENTS_FILE" ]; then
   echo "Error: Components file not found: $COMPONENTS_FILE"
   exit 1
