@@ -193,7 +193,7 @@ process_component() {
   # Step 5: Import issues to GitHub
   log ""
   log "Step 5/8: Importing issues to GitHub..."
-  python3 ./main.py
+  python3 -u ./main.py
   validate_file "jira-keys-to-github-id_${JIRA_MIGRATION_CURRENT_DATETIME}.txt" "Jira-to-GitHub mapping"
   
   # Step 6: Post-process epics
