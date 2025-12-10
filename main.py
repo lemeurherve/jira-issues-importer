@@ -20,7 +20,7 @@ config = load_config([
     ("github_repo", "JIRA_MIGRATION_GITHUB_REPO", "GitHub repository name", "helpdesk"),
     ("github_pat", "JIRA_MIGRATION_GITHUB_ACCESS_TOKEN", "GitHub Personal Access Token", None),
     ("hosted_artifact_org_repo", "JIRA_MIGRATION_HOSTED_ARTIFACT_ORG_REPO", "Hosted artifacts org/repo", "jenkinsci/artifacts-from-jira-issues"),
-    ("redirection_service", "JIRA_MIGRATION_REDIRECTION_SERVICE", "URL of the redirection service (keep empty if none)", "https://issue-redirect.jenkins.io"),
+    ("redirection_service", "JIRA_MIGRATION_REDIRECTION_SERVICE", "URL of the redirection service (keep empty if none, ex of value: 'https://issue-redirect.jenkins.io')", None),
     ("current_datetime", "JIRA_MIGRATION_CURRENT_DATETIME", "Current date time for files creation", now.strftime('%Y-%m-%d')),
 ])
 
@@ -36,13 +36,15 @@ all_xml_files = read_xml_files(config.file_names)
 
 print(
     f'Parameters taken in account:\n'
-    f'- XML file:                    {config.file_names}\n'
+    f'- XML file(s):                 {config.file_names}\n'
     f'- Jira project name:           {config.name}\n'
     f'- Jira Done statusCategory ID: {config.jira_done_id}\n'
     f'- Jira base url:               {config.jira_base_url}\n'
     f'- GitHub account name:         {config.github_account}\n'
     f'- GitHub repository name:      {config.github_repo}\n'
     f'- Hosted artifacts org/repo:   {config.hosted_artifact_org_repo}\n'
+    f'- Redirection service:         {config.redirection_service}\n'
+    f'- Datetime for outputs:        {config.current_datetime}\n'
     f'- Dry-run:                     {config.dry_run}\n'
 )
 
