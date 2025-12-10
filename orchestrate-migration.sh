@@ -103,12 +103,18 @@ validate_file() {
 archive_component_outputs() {
   local component=$1
   local archive_dir="logs/$component"
+  local consolidated_mappings_dir="logs/all-mappings"
   
   log "Archiving outputs to $archive_dir"
   mkdir -p "$archive_dir"
+  mkdir -p "$consolidated_mappings_dir"
   
   # Move mapping files
   if ls jira-keys-to-github-id*.txt 1> /dev/null 2>&1; then
+    # Copy external-use mapping to consolidated directory
+    if ls jira-keys-to-github-id-for-external-use*.txt 1> /dev/null 2>&1; then
+      cp jira-keys-to-github-id-for-external-use*.txt "$consolidated_mappings_dir/" 2>/dev/null || true
+    fi
     mv jira-keys-to-github-id*.txt "$archive_dir/" 2>/dev/null || true
   fi
   
