@@ -110,9 +110,10 @@ archive_component_outputs() {
   
   # Move mapping files
   if ls jira-keys-to-github-id*.txt 1> /dev/null 2>&1; then
-    # Copy external-use mapping to consolidated directory
-    if ls jira-keys-to-github-id-for-external-use*.txt 1> /dev/null 2>&1; then
-      cp jira-keys-to-github-id-for-external-use*.txt "$consolidated_mappings_dir/" 2>/dev/null || true
+    # Append external-use mapping to consolidated file
+    EXTERNAL_USE_FILE=$(ls jira-keys-to-github-id-for-external-use*.txt 2>/dev/null | head -1)
+    if [ -n "$EXTERNAL_USE_FILE" ]; then
+      cat "$EXTERNAL_USE_FILE" >> "$consolidated_mappings_dir/jira-keys-to-github-id-for-external-use.txt"
     fi
     mv jira-keys-to-github-id*.txt "$archive_dir/" 2>/dev/null || true
   fi
