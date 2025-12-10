@@ -117,7 +117,6 @@ def read_xml_file(file_path):
     with open(file_path) as file:
         return objectify.fromstring(file.read())
 
-
 def read_xml_files(file_path):
     files = list()
     for file_name in file_path.split(';'):
