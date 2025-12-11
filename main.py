@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import namedtuple
+import os
 import os.path
 from project import Project
 from importer import Importer
@@ -48,7 +49,9 @@ print(
     f'- Dry-run:                     {config.dry_run}\n'
 )
 
-start_from_issue = input('Start from [default "0" (beginning)]: ') or '0'
+start_from_issue = os.getenv('JIRA_MIGRATION_START_FROM_INDEX')
+if not start_from_issue:
+    start_from_issue = input('Start from [default "0" (beginning)]: ') or '0'
 
 project = Project(config)
 project.load_mappings()
@@ -59,7 +62,9 @@ for f in all_xml_files:
 
 project.prettify()
 
-input('Press any key to begin...')
+# Skip interactive prompt if JIRA_MIGRATION_START_FROM_INDEX is set
+if not os.getenv('JIRA_MIGRATION_START_FROM_INDEX'):
+    input('Press any key to begin...')
 
 '''
 Steps:

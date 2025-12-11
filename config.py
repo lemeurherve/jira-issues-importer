@@ -10,6 +10,11 @@ class Config:
         return f"Config({self.__dict__})"
 
 def ask_dry_mode():
+    # Check environment variable first for non-interactive mode
+    env_dry_run = os.getenv("JIRA_MIGRATION_DRY_RUN")
+    if env_dry_run is not None:
+        return env_dry_run.lower() in ('true', 'yes', '1', 'y')
+    
     reply = input("\n\nDry-run? (nothing created in GitHub) [Y/n]: ").strip().lower()
     return (reply != "n")
 

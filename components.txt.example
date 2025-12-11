@@ -1,0 +1,14 @@
+# Component mapping file for Jira to GitHub migration
+# Format: COMPONENT_NAME:GITHUB_REPO
+# One component per line
+#
+# The COMPONENT_NAME will be used in the JQL query:
+#   project = $JIRA_MIGRATION_JIRA_PROJECT_NAME AND component in ($COMPONENT_NAME) ORDER BY issuekey
+#
+# It will also be set as JIRA_MIGRATION_GITHUB_REPO for main.py
+# The GitHub organization is taken from JIRA_MIGRATION_GITHUB_NAME in .env
+#
+# Examples:
+# core:jenkins
+# git-plugin:git-plugin
+# docker:docker-plugin

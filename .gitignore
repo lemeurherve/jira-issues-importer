@@ -106,3 +106,10 @@ mappings/
 
 # Dry-run outputs
 dry-run/
+
+components.txt
+
+combined-remotelinks.txt
+combined-unique-watchers-emails.txt
+combined-watchers-usernames-and-emails.txt
+jira-to-github-mapping_*.json
