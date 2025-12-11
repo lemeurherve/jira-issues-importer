@@ -157,7 +157,7 @@ process_component() {
   log "=================================================="
   
   # Set component-specific environment variables
-  export JIRA_MIGRATION_GITHUB_REPO="$component"
+  export JIRA_MIGRATION_GITHUB_REPO="$github_repo"
   export JIRA_MIGRATION_JQL_QUERY="project = ${JIRA_MIGRATION_JIRA_PROJECT_NAME} AND component in ($component) ORDER BY issuekey"
   export JIRA_MIGRATION_FILE_PATHS="jira_output/combined.xml"
   
