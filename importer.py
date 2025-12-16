@@ -6,6 +6,7 @@ import copy
 import re
 
 from utils import fetch_labels_mapping, fetch_allowed_labels, convert_label, get_github_search_or_redirect_url_from_jira_key
+from html_generator import GitHubHTMLGenerator
 
 class FakeResponse:
     def __init__(self, data):
@@ -37,6 +38,7 @@ class Importer:
         }
         self._dry_run_issue_counter = -1
         self._dry_run_index_data = []
+        self._html_generator = GitHubHTMLGenerator()
 
     def import_milestones(self):
         """
@@ -384,6 +386,10 @@ class Importer:
                 f.write(index_md)
             print(f'Dry-run: saved index to {index_filename}')
 
+            # Generate index.html
+            index_html_filename = self._html_generator.generate_index_html('dry-run', self._dry_run_index_data)
+            print(f'Dry-run: saved index HTML to {index_html_filename}')
+
     def import_issue_with_comments(self, issue, comments):
         """
         Imports a single issue with its comments into GitHub.
@@ -444,6 +450,10 @@ class Importer:
                 f.write(md_content)
             print(f'Dry-run: saved issue markdown to {md_filename}')
 
+            # Generate HTML file
+            html_filename = self._html_generator.generate_html(json_filename)
+            print(f'Dry-run: saved issue HTML to {html_filename}')
+
             # Collect data for index
             self._dry_run_index_data.append({
                 'jira_key': jira_key,
@@ -451,7 +461,8 @@ class Importer:
                 'state': issue.get('state', 'open'),
                 'labels': issue.get('labels', []),
                 'created_at': issue.get('created_at', ''),
-                'closed_at': issue.get('closed_at', '')
+                'closed_at': issue.get('closed_at', ''),
+                'comment_count': len(comments)
             })
 
             return FakeResponse({'url': 'dry_run'})
