@@ -173,7 +173,12 @@ process_component() {
   # Step 1: Fetch issues from Jira
   log ""
   log "Step 1/10: Fetching issues from Jira..."
-  python3 ./fetch_issues.py
+  if ! python3 ./fetch_issues.py; then
+    log "ERROR: fetch_issues.py failed for component $component"
+    log "Skipping remaining steps for $component and continuing with next component"
+    cleanup_temp_files
+    return 0
+  fi
   validate_file "jira_output/result-0.xml" "Jira issues XML"
   
   # Step 2: Concatenate XML results
