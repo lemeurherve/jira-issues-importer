@@ -36,7 +36,12 @@ def fetch_total_results():
         print(response.text)
         exit(1)
     result = objectify.fromstring(response.text)
-    return int(result.channel.issue.attrib['total'])
+
+    count = int(result.channel.issue.attrib['total'])
+    if count == 0:
+        print('No results found for the given JQL query.')
+        exit(1)
+    return count
 
 
 total_results = fetch_total_results()
