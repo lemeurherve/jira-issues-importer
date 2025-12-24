@@ -173,7 +173,26 @@ process_component() {
   # Step 1: Fetch issues from Jira
   log ""
   log "Step 1/10: Fetching issues from Jira..."
-  python3 ./fetch_issues.py
+  local fetch_tmp
+  fetch_tmp=$(mktemp)
+  if ! python3 ./fetch_issues.py 2>&1 | tee "$fetch_tmp"; then
+    if grep -q "No results found for the given JQL query." "$fetch_tmp"; then
+      log "No Jira issues found for component $component"
+      log "Running archive step for $component and skipping remaining migration steps"
+      ./jira-archive-component.sh "$component"
+      archive_component_outputs "$component"
+      cleanup_temp_files
+      echo "$component" >> "$CHECKPOINT_FILE"
+      log "✓ Component $component archived with no issues to migrate"
+    else
+      log "ERROR: fetch_issues.py failed for component $component"
+      log "Skipping remaining steps for $component and continuing with next component"
+      cleanup_temp_files
+    fi
+    rm -f "$fetch_tmp"
+    return 0
+  fi
+  rm -f "$fetch_tmp"
   validate_file "jira_output/result-0.xml" "Jira issues XML"
   
   # Step 2: Concatenate XML results

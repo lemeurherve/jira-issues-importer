@@ -30,8 +30,18 @@ def fetch_total_results():
     global url, response, total_results
     url = f'{jira_server}/sr/jira.issueviews:searchrequest-xml/temp/SearchRequest.xml?jqlQuery={encoded_query}&tempMax=1&pager/start=1'
     response = requests.get(url)
+
+    if (response.status_code == 400):
+        print(f'Error fetching data from Jira, status code: {response.status_code}')
+        print(response.text)
+        exit(1)
     result = objectify.fromstring(response.text)
-    return int(result.channel.issue.attrib['total'])
+
+    count = int(result.channel.issue.attrib['total'])
+    if count == 0:
+        print('No results found for the given JQL query.')
+        exit(1)
+    return count
 
 
 total_results = fetch_total_results()
