@@ -3,9 +3,8 @@
 set -euo pipefail
 
 # Required variables
-: "${JIRA_MIGRATION_JIRA_PROJECT_NAME:? Missing Jira project name (e.g., INFRA)}"
-: "${JIRA_MIGRATION_JIRA_PROJECT_DESC:? Missing Jira project description (e.g., Jenkins Infrastructure project)}"
 : "${JIRA_MIGRATION_JIRA_PROJECT_NAME:? Missing Jira project name to process (e.g., INFRA)}"
+: "${JIRA_MIGRATION_JIRA_PROJECT_DESC:? Missing Jira project description (e.g., Jenkins Infrastructure project)}"
 : "${JIRA_MIGRATION_JIRA_USER:? Missing Jira user to be comment author (e.g., jenkins-infra-bot)}"
 : "${JIRA_MIGRATION_JIRA_TOKEN:? Missing Jira token for authentication (e.g., your-jira-token)}"
 : "${JIRA_MIGRATION_JIRA_URL:? Missing Jira base URL (e.g., https://issues.jenkins.io)}"
